@@ -130,11 +130,13 @@ function LandingHero() {
         muted
         loop
         playsInline
+        controls={false}
         preload="auto"
-        className="absolute inset-0 h-full w-full object-cover"
+        poster=""
+        className="absolute inset-0 block h-full w-full object-cover"
       />
       <div className="absolute inset-0 bg-[linear-gradient(120deg,rgba(7,39,28,0.88)_0%,rgba(8,62,40,0.76)_42%,rgba(7,31,23,0.9)_100%)]" />
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,213,79,0.18),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_30%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,122,24,0.24),transparent_26%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.12),transparent_30%)]" />
 
       <div className="relative mx-auto grid min-h-[84vh] max-w-7xl gap-8 px-4 py-8 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-12">
         <div className="max-w-2xl">

@@ -147,7 +147,13 @@ function ProductsPage() {
 
       {results.length === 0 ? (
         <div className="py-20 text-center">
-          <p className="text-lg text-muted-foreground">{t("ui.noProductsMatch")}</p>
+          <div className="mx-auto max-w-md rounded-[1.75rem] border border-border/70 bg-card p-8 shadow-sm">
+            <h2 className="text-xl font-black tracking-tight text-foreground">Search not found</h2>
+            <p className="mt-3 text-lg text-muted-foreground">{t("ui.noProductsMatch")}</p>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Try a different keyword, clear the current search, or return to the full catalog.
+            </p>
+          </div>
           <Link to="/products" className="mt-4 inline-block font-semibold text-primary hover:underline">
             {t("ui.clearFiltersTryAgain")}
           </Link>

@@ -27,6 +27,7 @@ function CheckoutPage() {
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
+  const [error, setError] = useState<string | null>(null);
   const [pay, setPay] = useState<"momo" | "cod">("momo");
   const delivery = subtotal === 0 || subtotal >= 30000 ? 0 : 1500;
   const total = subtotal + delivery;
@@ -55,6 +56,23 @@ function CheckoutPage() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    setError(null);
+
+    if (!formData.name.trim() || !formData.email.trim() || !formData.address.trim()) {
+      setError("Please complete all required customer details.");
+      return;
+    }
+
+    if (!formData.phone.trim()) {
+      setError("Please enter a valid phone number.");
+      return;
+    }
+
+    if (pay === "momo" && !formData.momoNumber.trim()) {
+      setError("Please enter your Mobile Money number.");
+      return;
+    }
+
     setLoading(true);
     const result = await checkout({
       ...formData,
@@ -66,6 +84,8 @@ function CheckoutPage() {
     if (result) {
       setOrderId(result.orderId);
       setOrderSuccess(true);
+    } else {
+      setError("We could not place your order. Please try again.");
     }
     setLoading(false);
   };
@@ -143,6 +163,11 @@ function CheckoutPage() {
             <span>{t("cart.total")}</span>
             <span className="text-2xl tabular-nums text-primary">{formatRWF(total)}</span>
           </div>
+          {error && (
+            <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              {error}
+            </div>
+          )}
           <Button type="submit" size="lg" className="mt-6 w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90 glow-primary" disabled={loading}>
             {loading ? t("ui.processing") : t("ui.placeOrder")}
           </Button>

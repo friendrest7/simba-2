@@ -46,8 +46,8 @@ export function Header() {
 
   return (
     <header className="sticky top-0 z-50 w-full border-b border-border/70 bg-background/94 backdrop-blur supports-[backdrop-filter]:bg-background/88">
-      <div className="border-b border-border/60 bg-brand-yellow/90">
-        <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-black/80">
+      <div className="border-b border-border/60 bg-[linear-gradient(90deg,color-mix(in_oklab,var(--brand-yellow)_92%,white)_0%,var(--brand-yellow)_100%)]">
+        <div className="mx-auto flex h-9 max-w-7xl items-center justify-between px-4 text-[11px] font-bold uppercase tracking-[0.16em] text-black/85">
           <div className="flex items-center gap-2">
             <Timer className="h-3.5 w-3.5" />
             <span>{t("ui.fastDeliveryBanner")}</span>
