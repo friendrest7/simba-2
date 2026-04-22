@@ -20,7 +20,7 @@ const Ctx = createContext<{
 
 export function ThemeProvider({ children }: { children: ReactNode }) {
   const [theme, setTheme] = useState<Mode>("light");
-  const [accent, setAccentState] = useState<Accent>("purple");
+  const [accent, setAccentState] = useState<Accent>("emerald");
 
   useEffect(() => {
     const savedTheme = localStorage.getItem("simba.theme") as Mode | null;

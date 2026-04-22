@@ -63,6 +63,22 @@ export const productsByCategorySlug = (slug: string) => {
   return PRODUCTS.filter((p) => p.category === cat.name);
 };
 
+const CATEGORY_LABEL_KEYS: Record<string, string> = {
+  "Alcoholic Drinks": "category.alcoholicDrinks",
+  "Cosmetics & Personal Care": "category.cosmetics",
+  "General": "category.general",
+  "Food Products": "category.food",
+  "Kitchenware & Electronics": "category.kitchenware",
+  "Cleaning & Sanitary": "category.cleaning",
+  "Baby Products": "category.baby",
+  "Pet Care": "category.pet",
+  "Kitchen Storage": "category.storage",
+  "Sports & Wellness": "category.sports",
+};
+
+export const categoryLabel = (name: string, t: (key: string) => string) =>
+  t(CATEGORY_LABEL_KEYS[name] ?? name);
+
 export const productById = (id: number) => PRODUCTS.find((p) => p.id === id);
 
 export const formatRWF = (n: number) =>

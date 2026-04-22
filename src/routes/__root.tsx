@@ -1,5 +1,4 @@
-import { Outlet, createRootRoute, HeadContent, Scripts, Link } from "@tanstack/react-router";
-import appCss from "../styles.css?url";
+import { Outlet, createRootRoute, Link } from "@tanstack/react-router";
 import { ThemeProvider } from "@/lib/theme";
 import { I18nProvider } from "@/lib/i18n";
 import { CartProvider } from "@/lib/cart";
@@ -50,32 +49,10 @@ export const Route = createRootRoute({
       { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png" },
       { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png" },
     ],
-    links: [
-      { rel: "stylesheet", href: appCss },
-      {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&display=swap",
-      },
-    ],
   }),
-  shellComponent: RootShell,
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });
-
-function RootShell({ children }: { children: React.ReactNode }) {
-  return (
-    <html lang="en">
-      <head>
-        <HeadContent />
-      </head>
-      <body>
-        {children}
-        <Scripts />
-      </body>
-    </html>
-  );
-}
 
 function RootComponent() {
   return (
