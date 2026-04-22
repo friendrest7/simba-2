@@ -1,25 +1,46 @@
 import { createContext, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
+import { toast } from "sonner";
 import type { Product } from "./products";
+import {
+  PICKUP_BRANCHES,
+  createPickupOrder,
+  getBranchStock,
+  type BranchName,
+  type OrderRecord,
+  type PaymentMethod,
+  type SessionUser,
+} from "@/lib/demo-store";
 
 export type CartItem = { product: Product; qty: number };
 
-type CheckoutApiResponse = { orderId: string; status: string; message: string };
-
-const STORAGE_KEY = "simba.cart.v1";
-const CART_API_URL = "/api/cart";
-const CHECKOUT_API_URL = "/api/checkout";
+const STORAGE_KEY = "simba.cart.v2";
+const BRANCH_STORAGE_KEY = "simba.branch.v1";
 
 const Ctx = createContext<{
   items: CartItem[];
   count: number;
   subtotal: number;
   hydrated: boolean;
+  selectedBranch: BranchName;
+  lastOrder: OrderRecord | null;
   add: (p: Product, qty?: number) => Promise<void>;
   remove: (id: number) => Promise<void>;
   setQty: (id: number, qty: number) => Promise<void>;
   clear: () => Promise<void>;
   qtyOf: (id: number) => number;
-  checkout: (data: any) => Promise<CheckoutApiResponse | null>;
+  stockOf: (id: number) => number;
+  setSelectedBranch: (branch: BranchName) => void;
+  overLimitItems: Array<{ product: Product; qty: number; stock: number }>;
+  checkout: (data: {
+    user: SessionUser;
+    branch: BranchName;
+    pickupDate: string;
+    pickupSlot: string;
+    paymentMethod: PaymentMethod;
+    paymentPhone?: string;
+    customerPhone: string;
+    notes?: string;
+  }) => Promise<{ ok: true; order: OrderRecord } | { ok: false; error: string; productName?: string }>;
 } | null>(null);
 
 const readStoredCart = (): CartItem[] => {
@@ -37,75 +58,71 @@ const writeStoredCart = (items: CartItem[]) => {
   } catch {}
 };
 
+const readStoredBranch = (): BranchName => {
+  try {
+    const raw = localStorage.getItem(BRANCH_STORAGE_KEY) as BranchName | null;
+    return raw && PICKUP_BRANCHES.includes(raw) ? raw : "Remera";
+  } catch {
+    return "Remera";
+  }
+};
+
 export function CartProvider({ children }: { children: ReactNode }) {
   const [items, setItems] = useState<CartItem[]>([]);
   const [hydrated, setHydrated] = useState(false);
+  const [selectedBranch, setSelectedBranchState] = useState<BranchName>("Remera");
+  const [lastOrder, setLastOrder] = useState<OrderRecord | null>(null);
 
   useEffect(() => {
-    const bootstrap = async () => {
-      const localItems = readStoredCart();
-      if (localItems.length > 0) {
-        setItems(localItems);
-        setHydrated(true);
-        return;
-      }
-
-      try {
-        const response = await fetch(CART_API_URL);
-        if (!response.ok) throw new Error("Failed to fetch cart");
-        const data = await response.json();
-        setItems(Array.isArray(data.items) ? data.items : []);
-      } catch {
-        setItems(localItems);
-      } finally {
-        setHydrated(true);
-      }
-    };
-
-    bootstrap();
+    setItems(readStoredCart());
+    setSelectedBranchState(readStoredBranch());
+    setHydrated(true);
   }, []);
 
   useEffect(() => {
-    if (hydrated) {
-      writeStoredCart(items);
-    }
+    if (!hydrated) return;
+    writeStoredCart(items);
   }, [items, hydrated]);
 
-  const syncCartAPI = async (payload: unknown, method = "POST") => {
-    try {
-      await fetch(CART_API_URL, {
-        method,
-        headers: { "Content-Type": "application/json" },
-        body: method === "DELETE" ? undefined : JSON.stringify(payload),
-      });
-    } catch {
-      // Local cart remains source of truth when API is unavailable.
-    }
+  useEffect(() => {
+    if (!hydrated) return;
+    localStorage.setItem(BRANCH_STORAGE_KEY, selectedBranch);
+  }, [selectedBranch, hydrated]);
+
+  const stockOf = (id: number) => getBranchStock(selectedBranch, id);
+
+  const setSelectedBranch = (branch: BranchName) => {
+    setSelectedBranchState(branch);
   };
 
-  const add = async (p: Product, qty = 1) => {
-    setItems((curr) => {
-      const found = curr.find((i) => i.product.id === p.id);
-      if (found) {
-        const next = curr.map((i) =>
-          i.product.id === p.id ? { ...i, qty: i.qty + qty } : i,
-        );
-        void syncCartAPI({ id: p.id, qty: found.qty + qty });
-        return next;
+  const add = async (product: Product, qty = 1) => {
+    setItems((current) => {
+      const currentQty = current.find((item) => item.product.id === product.id)?.qty ?? 0;
+      const available = stockOf(product.id);
+
+      if (available <= 0) {
+        toast.error(`${product.name} is unavailable at ${selectedBranch}.`);
+        return current;
       }
 
-      const next = [...curr, { product: p, qty }];
-      void syncCartAPI({ product: p, qty });
-      return next;
+      if (currentQty + qty > available) {
+        toast.error(`Only ${available} available at ${selectedBranch}.`);
+        return current;
+      }
+
+      const existing = current.find((item) => item.product.id === product.id);
+      if (existing) {
+        return current.map((item) =>
+          item.product.id === product.id ? { ...item, qty: item.qty + qty } : item,
+        );
+      }
+
+      return [...current, { product, qty }];
     });
   };
 
   const remove = async (id: number) => {
-    setItems((curr) => {
-      const next = curr.filter((i) => i.product.id !== id);
-      void syncCartAPI({ id, qty: 0 });
-      return next;
-    });
+    setItems((current) => current.filter((item) => item.product.id !== id));
   };
 
   const setQty = async (id: number, qty: number) => {
@@ -114,80 +131,77 @@ export function CartProvider({ children }: { children: ReactNode }) {
       return;
     }
 
-    setItems((curr) => {
-      const next = curr.map((i) => (i.product.id === id ? { ...i, qty } : i));
-      void syncCartAPI({ id, qty });
-      return next;
-    });
+    const available = stockOf(id);
+    if (qty > available) {
+      toast.error(`Only ${available} available at ${selectedBranch}.`);
+      return;
+    }
+
+    setItems((current) => current.map((item) => (item.product.id === id ? { ...item, qty } : item)));
   };
 
   const clear = async () => {
     setItems([]);
+    setLastOrder(null);
     try {
       localStorage.removeItem(STORAGE_KEY);
     } catch {}
-    await syncCartAPI({}, "DELETE");
   };
 
-  const checkout = async (data: any): Promise<CheckoutApiResponse | null> => {
-    if (!items.length) {
-      return null;
-    }
-
-    const payload = {
+  const checkout = async (data: {
+    user: SessionUser;
+    branch: BranchName;
+    pickupDate: string;
+    pickupSlot: string;
+    paymentMethod: PaymentMethod;
+    paymentPhone?: string;
+    customerPhone: string;
+    notes?: string;
+  }) => {
+    const result = createPickupOrder({
       ...data,
-      items: items.map((item) => ({
-        productId: item.product.id,
-        quantity: item.qty,
-        price: item.product.price,
-        name: item.product.name,
-      })),
-    };
+      items: items.map((item) => ({ productId: item.product.id, quantity: item.qty })),
+    });
 
-    try {
-      const response = await fetch(CHECKOUT_API_URL, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
-      });
-
-      if (response.ok) {
-        const result: CheckoutApiResponse = await response.json();
-        if (result.status === "success") {
-          await clear();
-          return result;
-        }
-      }
-    } catch {
-      // Fall through to local success fallback.
+    if (!result.ok) {
+      return result;
     }
 
-    const fallbackResult: CheckoutApiResponse = {
-      orderId: `SIMBA-${Date.now()}`,
-      status: "success",
-      message: "Order placed successfully.",
-    };
-    await clear();
-    return fallbackResult;
+    setLastOrder(result.order);
+    setItems([]);
+    localStorage.removeItem(STORAGE_KEY);
+    return result;
   };
 
   const value = useMemo(() => {
     const count = items.reduce((sum, item) => sum + item.qty, 0);
     const subtotal = items.reduce((sum, item) => sum + item.qty * item.product.price, 0);
+    const overLimitItems = items
+      .map((item) => ({
+        product: item.product,
+        qty: item.qty,
+        stock: stockOf(item.product.id),
+      }))
+      .filter((item) => item.qty > item.stock);
 
     return {
       items,
       count,
       subtotal,
       hydrated,
-      qtyOf: (id: number) => items.find((i) => i.product.id === id)?.qty ?? 0,
+      selectedBranch,
+      lastOrder,
+      qtyOf: (id: number) => items.find((item) => item.product.id === id)?.qty ?? 0,
+      stockOf,
+      setSelectedBranch,
       add,
       remove,
       setQty,
       clear,
       checkout,
+      overLimitItems,
     };
-  }, [items, hydrated]);
+  }, [items, hydrated, selectedBranch, lastOrder]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

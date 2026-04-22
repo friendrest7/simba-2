@@ -6,16 +6,17 @@ import { useI18n } from "@/lib/i18n";
 import { useState } from "react";
 
 export function ProductCard({ product }: { product: Product }) {
-  const { add, qtyOf, setQty } = useCart();
+  const { add, qtyOf, setQty, stockOf } = useCart();
   const { t } = useI18n();
   const qty = qtyOf(product.id);
+  const branchStock = stockOf(product.id);
   const [imgError, setImgError] = useState(false);
 
   return (
     <div className="group relative flex h-full flex-col rounded-[1.65rem] border border-border/70 bg-card p-3 shadow-sm transition-all hover:-translate-y-0.5 hover:border-primary/25 hover:shadow-lg">
       <div className="flex items-center justify-between gap-2">
         <span className="rounded-full bg-secondary px-2.5 py-1 text-[10px] font-bold uppercase tracking-[0.14em] text-primary">
-          {product.inStock ? t("card.inStock") : t("card.outOfStock")}
+          {branchStock > 0 ? t("card.inStock") : t("card.outOfStock")}
         </span>
         <span className="text-[10px] font-semibold uppercase tracking-[0.12em] text-muted-foreground">
           {product.unit}
@@ -43,9 +44,9 @@ export function ProductCard({ product }: { product: Product }) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (product.inStock) add(product);
+                if (branchStock > 0) add(product);
               }}
-              disabled={!product.inStock}
+              disabled={branchStock <= 0}
               className="flex h-9 w-9 items-center justify-center rounded-xl border border-border/60 bg-white text-primary shadow-md transition hover:bg-primary hover:text-primary-foreground disabled:cursor-not-allowed disabled:opacity-50"
               aria-label={t("card.add")}
             >
@@ -78,7 +79,7 @@ export function ProductCard({ product }: { product: Product }) {
           )}
         </div>
 
-        {!product.inStock && (
+        {branchStock <= 0 && (
           <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px]">
             <span className="rounded-md bg-destructive px-2 py-1 text-[10px] font-bold uppercase tracking-wider text-destructive-foreground">
               {t("card.outOfStock")}
@@ -97,6 +98,9 @@ export function ProductCard({ product }: { product: Product }) {
         </Link>
 
         <div className="mt-1 text-[11px] font-medium text-muted-foreground">{categoryLabel(product.category, t)}</div>
+        <div className="mt-1 text-[11px] font-semibold text-primary">
+          {branchStock} {t("pickup.availableNow")}
+        </div>
 
         <div className="mt-auto flex items-end justify-between gap-3 pt-3">
           <div>
@@ -109,9 +113,9 @@ export function ProductCard({ product }: { product: Product }) {
               onClick={(e) => {
                 e.preventDefault();
                 e.stopPropagation();
-                if (product.inStock) add(product);
+                if (branchStock > 0) add(product);
               }}
-              disabled={!product.inStock}
+              disabled={branchStock <= 0}
               className="rounded-xl bg-primary px-3.5 py-2 text-xs font-extrabold text-primary-foreground transition hover:bg-primary/90 disabled:cursor-not-allowed disabled:opacity-50"
             >
               {t("card.add")}

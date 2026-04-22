@@ -6,10 +6,17 @@ import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
-import { useEffect, useState, type ReactNode } from "react";
-import { Banknote, CheckCircle2, Smartphone } from "lucide-react";
+import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, Store, Wallet } from "lucide-react";
 
 type SignInSearch = { redirect?: string };
+
+const PICKUP_SLOTS = ["08:00 - 10:00", "10:00 - 12:00", "12:00 - 14:00", "16:00 - 18:00"];
+
+function defaultPickupDate() {
+  return new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
@@ -20,73 +27,94 @@ export const Route = createFileRoute("/checkout")({
 });
 
 function CheckoutPage() {
-  const { items, subtotal, count, checkout } = useCart();
-  const { user } = useAuth();
+  const { items, subtotal, count, checkout, selectedBranch, setSelectedBranch, overLimitItems } = useCart();
+  const { user, hydrated } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [loading, setLoading] = useState(false);
   const [orderSuccess, setOrderSuccess] = useState(false);
   const [orderId, setOrderId] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
-  const [pay, setPay] = useState<"momo" | "cod">("momo");
-  const delivery = subtotal === 0 || subtotal >= 30000 ? 0 : 1500;
-  const total = subtotal + delivery;
+  const [paymentMethod, setPaymentMethod] = useState<"momo" | "pay-on-pickup">("momo");
   const [formData, setFormData] = useState({
     name: user?.name || "",
     email: user?.email || "",
-    phone: "",
-    address: "",
-    momoNumber: "",
+    customerPhone: user?.phone || "",
+    branch: selectedBranch,
+    pickupDate: defaultPickupDate(),
+    pickupSlot: PICKUP_SLOTS[1],
+    paymentPhone: user?.phone || "",
+    notes: "",
   });
 
   useEffect(() => {
+    if (!hydrated) return;
     if (!user && !orderSuccess) {
       navigate({ to: "/signin", search: { redirect: "/checkout" } as never });
-    } else if (count === 0 && !orderSuccess) {
+      return;
+    }
+
+    if (count === 0 && !orderSuccess) {
       navigate({ to: "/cart" });
     }
-  }, [user, count, orderSuccess, navigate]);
+  }, [user, count, orderSuccess, hydrated, navigate]);
+
+  useEffect(() => {
+    setFormData((current) => ({
+      ...current,
+      name: user?.name || current.name,
+      email: user?.email || current.email,
+      customerPhone: user?.phone || current.customerPhone,
+      paymentPhone: user?.phone || current.paymentPhone,
+      branch: selectedBranch,
+    }));
+  }, [selectedBranch, user]);
+
+  const branchTotalItems = useMemo(() => items.reduce((sum, item) => sum + item.qty, 0), [items]);
 
   if (!user || (count === 0 && !orderSuccess)) return null;
-
-  const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { id, value } = e.target;
-    setFormData((prev) => ({ ...prev, [id]: value }));
-  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setError(null);
 
-    if (!formData.name.trim() || !formData.email.trim() || !formData.address.trim()) {
-      setError("Please complete all required customer details.");
+    if (!formData.customerPhone.trim() || !formData.pickupDate || !formData.pickupSlot) {
+      setError(t("checkout.error.completeDetails"));
       return;
     }
 
-    if (!formData.phone.trim()) {
-      setError("Please enter a valid phone number.");
+    if (paymentMethod === "momo" && !formData.paymentPhone.trim()) {
+      setError(t("checkout.error.momo"));
       return;
     }
 
-    if (pay === "momo" && !formData.momoNumber.trim()) {
-      setError("Please enter your Mobile Money number.");
+    if (overLimitItems.length > 0) {
+      setError(t("pickup.fixCart"));
       return;
     }
 
     setLoading(true);
     const result = await checkout({
-      ...formData,
-      paymentMethod: pay,
-      phone: pay === "momo" ? formData.momoNumber : formData.phone,
-      items: items.map((item) => ({ productId: item.product.id, quantity: item.qty })),
+      user,
+      branch: formData.branch,
+      pickupDate: formData.pickupDate,
+      pickupSlot: formData.pickupSlot,
+      paymentMethod,
+      paymentPhone: paymentMethod === "momo" ? formData.paymentPhone : undefined,
+      customerPhone: formData.customerPhone,
+      notes: formData.notes,
     });
 
-    if (result) {
-      setOrderId(result.orderId);
+    if (result.ok) {
+      setOrderId(result.order.id);
       setOrderSuccess(true);
+      setSelectedBranch(formData.branch);
+    } else if (result.productName) {
+      setError(`${t("pickup.stockChanged")} ${result.productName}.`);
     } else {
-      setError("We could not place your order. Please try again.");
+      setError(t(result.error));
     }
+
     setLoading(false);
   };
 
@@ -96,79 +124,177 @@ function CheckoutPage() {
         <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-success/15">
           <CheckCircle2 className="h-12 w-12 text-success" />
         </div>
-        <h1 className="text-3xl font-extrabold">{t("ui.orderPlaced")}</h1>
+        <h1 className="text-3xl font-extrabold">{t("pickup.pickupReady")}</h1>
         <p className="mt-2 text-muted-foreground">
-          {t("ui.orderPlacedHint")} {orderId ? `#${orderId}` : ""}
+          {t("pickup.pickupReadyHint")} {orderId ? `#${orderId}` : ""}
         </p>
-        <Button asChild size="lg" className="mt-6 rounded-full gradient-brand text-brand-foreground hover:opacity-90">
-          <Link to="/">{t("ui.backHome")}</Link>
-        </Button>
+        <div className="mt-6 rounded-2xl border border-border bg-card p-5 text-left shadow-sm">
+          <div className="grid gap-3 text-sm">
+            <SummaryRow label={t("pickup.branch")} value={formData.branch} />
+            <SummaryRow label={t("pickup.date")} value={formData.pickupDate} />
+            <SummaryRow label={t("pickup.slot")} value={formData.pickupSlot} />
+            <SummaryRow label={t("dashboard.payment")} value={paymentMethod === "momo" ? t("ui.mobileMoney") : t("pickup.payOnPickup")} />
+          </div>
+        </div>
+        <div className="mt-6 flex flex-col gap-3 sm:flex-row sm:justify-center">
+          <Button asChild size="lg" className="rounded-full gradient-brand text-brand-foreground hover:opacity-90">
+            <Link to="/">{t("ui.backHome")}</Link>
+          </Button>
+          {(user.role === "manager" || user.role === "staff") && (
+            <Button asChild variant="outline" size="lg" className="rounded-full">
+              <Link to="/branch-dashboard">{t("app.dashboard")}</Link>
+            </Button>
+          )}
+        </div>
       </div>
     );
   }
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="mb-6 text-3xl font-extrabold tracking-tight md:text-4xl">{t("checkout.title")}</h1>
+      <h1 className="mb-2 text-3xl font-extrabold tracking-tight md:text-4xl">{t("pickup.title")}</h1>
+      <p className="text-sm text-muted-foreground">{t("pickup.instructions")}</p>
 
       <form onSubmit={handleSubmit} className="mt-6 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-6">
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold">{t("ui.contactInformation")}</h2>
-            <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <div>
-                <Label htmlFor="name">{t("checkout.name")}</Label>
-                <Input id="name" value={formData.name} onChange={handleInputChange} required placeholder={t("checkout.name")} className="mt-1.5 h-11 rounded-xl" />
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Store className="h-5 w-5" />
               </div>
               <div>
-                <Label htmlFor="email">{t("ui.emailAddress")}</Label>
-                <Input id="email" type="email" value={formData.email} onChange={handleInputChange} required placeholder={t("signin.emailPh")} className="mt-1.5 h-11 rounded-xl" />
+                <h2 className="text-lg font-bold">{t("pickup.branch")}</h2>
+                <p className="text-sm text-muted-foreground">{branchTotalItems} {t("cart.items")}</p>
+              </div>
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div>
+                <Label htmlFor="branch">{t("pickup.branch")}</Label>
+                <select
+                  id="branch"
+                  value={formData.branch}
+                  onChange={(e) => {
+                    const branch = e.target.value as BranchName;
+                    setFormData((current) => ({ ...current, branch }));
+                    setSelectedBranch(branch);
+                  }}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3"
+                >
+                  {PICKUP_BRANCHES.map((branch) => (
+                    <option key={branch} value={branch}>
+                      {branch}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="pickupDate">{t("pickup.date")}</Label>
+                <Input
+                  id="pickupDate"
+                  type="date"
+                  min={new Date().toISOString().slice(0, 10)}
+                  value={formData.pickupDate}
+                  onChange={(e) => setFormData((current) => ({ ...current, pickupDate: e.target.value }))}
+                  className="mt-1.5 h-11 rounded-xl"
+                />
+              </div>
+              <div>
+                <Label htmlFor="pickupSlot">{t("pickup.slot")}</Label>
+                <select
+                  id="pickupSlot"
+                  value={formData.pickupSlot}
+                  onChange={(e) => setFormData((current) => ({ ...current, pickupSlot: e.target.value }))}
+                  className="mt-1.5 h-11 w-full rounded-xl border border-input bg-background px-3"
+                >
+                  {PICKUP_SLOTS.map((slot) => (
+                    <option key={slot} value={slot}>
+                      {slot}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div>
+                <Label htmlFor="customerPhone">{t("checkout.phone")}</Label>
+                <Input
+                  id="customerPhone"
+                  value={formData.customerPhone}
+                  onChange={(e) => setFormData((current) => ({ ...current, customerPhone: e.target.value }))}
+                  className="mt-1.5 h-11 rounded-xl"
+                />
               </div>
               <div className="sm:col-span-2">
-                <Label htmlFor="phone">{t("checkout.phone")}</Label>
-                <div className="mt-1.5 flex items-center gap-2">
-                  <span className="inline-flex h-11 items-center rounded-xl border border-border bg-secondary px-3 text-sm font-semibold">+250</span>
-                  <Input id="phone" type="tel" value={formData.phone} onChange={(e) => setFormData((prev) => ({ ...prev, phone: e.target.value.replace(/\D/g, "").slice(0, 9) }))} required placeholder="07XXXXXXXX" className="h-11 flex-1 rounded-xl" />
-                </div>
-              </div>
-              <div className="sm:col-span-2">
-                <Label htmlFor="address">{t("ui.deliveryAddress")}</Label>
-                <Input id="address" value={formData.address} onChange={handleInputChange} required placeholder={t("checkout.addressPh")} className="mt-1.5 h-11 rounded-xl" />
+                <Label htmlFor="notes">{t("pickup.notes")}</Label>
+                <Input
+                  id="notes"
+                  value={formData.notes}
+                  onChange={(e) => setFormData((current) => ({ ...current, notes: e.target.value }))}
+                  placeholder={t("pickup.notesPlaceholder")}
+                  className="mt-1.5 h-11 rounded-xl"
+                />
               </div>
             </div>
           </section>
 
           <section className="rounded-2xl border border-border bg-card p-6 shadow-sm">
-            <h2 className="mb-4 text-lg font-bold">{t("ui.paymentMethod")}</h2>
-            <div className="grid gap-3 sm:grid-cols-2">
-              <PayOption active={pay === "momo"} onClick={() => setPay("momo")} icon={<Smartphone className="h-5 w-5" />} label={t("ui.mobileMoney")} hint={t("ui.mobileMoneyHint")} />
-              <PayOption active={pay === "cod"} onClick={() => setPay("cod")} icon={<Banknote className="h-5 w-5" />} label={t("ui.cashOnDelivery")} hint={t("ui.cashOnDeliveryHint")} />
+            <div className="mb-4 flex items-center gap-3">
+              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Wallet className="h-5 w-5" />
+              </div>
+              <div>
+                <h2 className="text-lg font-bold">{t("ui.paymentMethod")}</h2>
+                <p className="text-sm text-muted-foreground">{t("pickup.free")}</p>
+              </div>
             </div>
-            {pay === "momo" && (
+            <div className="grid gap-3 sm:grid-cols-2">
+              <PaymentOption
+                active={paymentMethod === "momo"}
+                onClick={() => setPaymentMethod("momo")}
+                label={t("ui.mobileMoney")}
+                hint={t("ui.mobileMoneyHint")}
+              />
+              <PaymentOption
+                active={paymentMethod === "pay-on-pickup"}
+                onClick={() => setPaymentMethod("pay-on-pickup")}
+                label={t("pickup.payOnPickup")}
+                hint={t("pickup.payOnPickupHint")}
+              />
+            </div>
+            {paymentMethod === "momo" && (
               <div className="mt-4">
-                <Label htmlFor="momoNumber">{t("ui.mobileMoneyNumber")}</Label>
-                <Input id="momoNumber" type="tel" value={formData.momoNumber} onChange={handleInputChange} required placeholder="07XXXXXXXX" className="mt-1.5 h-11 rounded-xl" />
+                <Label htmlFor="paymentPhone">{t("ui.mobileMoneyNumber")}</Label>
+                <Input
+                  id="paymentPhone"
+                  value={formData.paymentPhone}
+                  onChange={(e) => setFormData((current) => ({ ...current, paymentPhone: e.target.value }))}
+                  className="mt-1.5 h-11 rounded-xl"
+                />
               </div>
             )}
           </section>
         </div>
 
         <aside className="h-fit rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-20">
-          <h2 className="mb-4 text-xl font-extrabold">{t("ui.orderSummary")}</h2>
+          <h2 className="mb-4 text-xl font-extrabold">{t("pickup.summary")}</h2>
           <div className="space-y-2.5 text-sm">
-            <Row label={t("cart.subtotal")} value={formatRWF(subtotal)} />
-            <Row label={t("cart.delivery")} value={delivery === 0 ? t("cart.free") : formatRWF(delivery)} />
+            <SummaryRow label={t("pickup.branch")} value={formData.branch} />
+            <SummaryRow label={t("cart.subtotal")} value={formatRWF(subtotal)} />
+            <SummaryRow label={t("pickup.summary")} value={t("pickup.free")} />
           </div>
           <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4 font-bold">
             <span>{t("cart.total")}</span>
-            <span className="text-2xl tabular-nums text-primary">{formatRWF(total)}</span>
+            <span className="text-2xl tabular-nums text-primary">{formatRWF(subtotal)}</span>
           </div>
+          {overLimitItems.length > 0 && (
+            <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
+              {t("pickup.cartBlocked")}
+            </div>
+          )}
           {error && (
             <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
               {error}
             </div>
           )}
-          <Button type="submit" size="lg" className="mt-6 w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90 glow-primary" disabled={loading}>
+          <Button type="submit" size="lg" className="mt-6 w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90 glow-primary" disabled={loading || overLimitItems.length > 0}>
             {loading ? t("ui.processing") : t("ui.placeOrder")}
           </Button>
           <Button asChild variant="ghost" className="mt-2 w-full rounded-full">
@@ -180,37 +306,34 @@ function CheckoutPage() {
   );
 }
 
-function PayOption({
+function PaymentOption({
   active,
   onClick,
-  icon,
   label,
   hint,
 }: {
   active: boolean;
   onClick: () => void;
-  icon: ReactNode;
   label: string;
   hint: string;
 }) {
   return (
-    <button type="button" onClick={onClick} className={`flex items-center gap-3 rounded-xl border p-4 text-left transition ${active ? "border-primary bg-primary/8 shadow-md" : "border-border bg-background hover:border-primary/40"}`}>
-      <div className={`flex h-10 w-10 items-center justify-center rounded-lg ${active ? "bg-primary text-primary-foreground" : "bg-secondary"}`}>
-        {icon}
-      </div>
-      <div>
-        <div className="text-sm font-semibold text-foreground">{label}</div>
-        <div className="text-xs text-muted-foreground">{hint}</div>
-      </div>
+    <button
+      type="button"
+      onClick={onClick}
+      className={`rounded-xl border p-4 text-left transition ${active ? "border-primary bg-primary/8 shadow-md" : "border-border bg-background hover:border-primary/40"}`}
+    >
+      <div className="text-sm font-semibold text-foreground">{label}</div>
+      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
     </button>
   );
 }
 
-function Row({ label, value }: { label: string; value: string }) {
+function SummaryRow({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex items-center justify-between">
+    <div className="flex items-center justify-between gap-4">
       <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold tabular-nums">{value}</span>
+      <span className="text-right font-semibold">{value}</span>
     </div>
   );
 }

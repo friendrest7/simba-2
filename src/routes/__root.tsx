@@ -5,6 +5,7 @@ import { CartProvider } from "@/lib/cart";
 import { AuthProvider } from "@/lib/auth";
 import { Header } from "@/components/Header";
 import { Footer } from "@/components/Footer";
+import { Toaster } from "@/components/ui/sonner";
 
 function NotFoundComponent() {
   return (
@@ -33,21 +34,34 @@ export const Route = createRootRoute({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Simba Supermarket — Rwanda's Online Supermarket" },
+      { title: "Simba Supermarket - Pickup-first grocery demo" },
       {
         name: "description",
         content:
-          "Shop fresh groceries, drinks and essentials from Simba Supermarket. Fast delivery in Kigali, Rwanda. Pay with MoMo or cash on delivery.",
+          "Reserve groceries online and pick them up from Simba branches with branch-aware stock and staff workflows.",
       },
-      { property: "og:title", content: "Simba Supermarket — Rwanda's Online Supermarket" },
-      { property: "og:description", content: "Simba Marketplace Hub is a modern e-commerce platform for Rwanda's popular online supermarket." },
+      { property: "og:title", content: "Simba Supermarket - Pickup-first grocery demo" },
+      {
+        property: "og:description",
+        content: "Branch-aware pickup ordering, inventory, reviews, and staff dashboard for Simba 2.0.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Simba Supermarket — Rwanda's Online Supermarket" },
-      { name: "description", content: "Simba Marketplace Hub is a modern e-commerce platform for Rwanda's popular online supermarket." },
-      { name: "twitter:description", content: "Simba Marketplace Hub is a modern e-commerce platform for Rwanda's popular online supermarket." },
-      { property: "og:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png" },
-      { name: "twitter:image", content: "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png" },
+      { name: "twitter:title", content: "Simba Supermarket - Pickup-first grocery demo" },
+      {
+        name: "twitter:description",
+        content: "Branch-aware pickup ordering, inventory, reviews, and staff dashboard for Simba 2.0.",
+      },
+      {
+        property: "og:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
+      },
+      {
+        name: "twitter:image",
+        content:
+          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
+      },
     ],
   }),
   component: RootComponent,
@@ -67,6 +81,7 @@ function RootComponent() {
               </main>
               <Footer />
             </div>
+            <Toaster richColors position="top-center" />
           </CartProvider>
         </AuthProvider>
       </I18nProvider>

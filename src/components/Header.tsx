@@ -13,6 +13,7 @@ import { useTheme, ACCENTS } from "@/lib/theme";
 import { useI18n, LANGS, type Lang } from "@/lib/i18n";
 import { useCart } from "@/lib/cart";
 import { useAuth } from "@/lib/auth";
+import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
 import {
   Languages,
   MapPin,
@@ -32,7 +33,7 @@ const KIGALI_MAP_URL =
 export function Header() {
   const { theme, toggle, accent, setAccent } = useTheme();
   const { t, lang, setLang } = useI18n();
-  const { count, subtotal } = useCart();
+  const { count, subtotal, selectedBranch, setSelectedBranch } = useCart();
   const { user, signOut } = useAuth();
   const [q, setQ] = useState("");
   const navigate = useNavigate();
@@ -59,7 +60,7 @@ export function Header() {
             className="hidden items-center gap-1 md:inline-flex"
           >
             <MapPin className="h-3.5 w-3.5" />
-            Kigali, Rwanda
+            {selectedBranch}, Rwanda
           </a>
         </div>
       </div>
@@ -88,6 +89,22 @@ export function Header() {
             />
           </div>
         </form>
+
+        <label className="hidden items-center gap-2 lg:flex">
+          <MapPin className="h-4 w-4 text-primary" />
+          <select
+            aria-label={t("header.chooseBranch")}
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value as BranchName)}
+            className="h-10 rounded-xl border border-input bg-background px-3 text-sm font-semibold text-foreground"
+          >
+            {PICKUP_BRANCHES.map((branch) => (
+              <option key={branch} value={branch}>
+                {branch}
+              </option>
+            ))}
+          </select>
+        </label>
 
         <div className="hidden items-center gap-1 lg:flex">
           <Button
@@ -168,6 +185,11 @@ export function Header() {
                 </div>
               </DropdownMenuLabel>
               <DropdownMenuSeparator />
+              {(user.role === "manager" || user.role === "staff") && (
+                <DropdownMenuItem asChild>
+                  <Link to="/branch-dashboard">{t("app.dashboard")}</Link>
+                </DropdownMenuItem>
+              )}
               <DropdownMenuItem onClick={signOut} className="text-destructive focus:text-destructive">
                 {t("nav.signout")}
               </DropdownMenuItem>
@@ -206,6 +228,29 @@ export function Header() {
             </span>
           </Link>
         </Button>
+      </div>
+
+      <div className="border-t border-border/60 bg-background/92 px-4 py-2 lg:hidden">
+        <div className="mx-auto flex max-w-7xl items-center gap-2">
+          <MapPin className="h-4 w-4 text-primary" />
+          <select
+            aria-label={t("header.chooseBranch")}
+            value={selectedBranch}
+            onChange={(e) => setSelectedBranch(e.target.value as BranchName)}
+            className="h-9 flex-1 rounded-xl border border-input bg-background px-3 text-sm font-semibold text-foreground"
+          >
+            {PICKUP_BRANCHES.map((branch) => (
+              <option key={branch} value={branch}>
+                {branch}
+              </option>
+            ))}
+          </select>
+          {(user?.role === "manager" || user?.role === "staff") && (
+            <Button asChild variant="outline" size="sm" className="rounded-xl">
+              <Link to="/branch-dashboard">{t("app.dashboard")}</Link>
+            </Button>
+          )}
+        </div>
       </div>
     </header>
   );

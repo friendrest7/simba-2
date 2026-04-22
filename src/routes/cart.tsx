@@ -13,11 +13,10 @@ export const Route = createFileRoute("/cart")({
 });
 
 function CartPage() {
-  const { items, subtotal, count, setQty, remove } = useCart();
+  const { items, subtotal, count, setQty, remove, selectedBranch, overLimitItems, stockOf } = useCart();
   const { user } = useAuth();
   const { t } = useI18n();
-  const delivery = subtotal === 0 || subtotal >= 30000 ? 0 : 1500;
-  const total = subtotal + delivery;
+  const total = subtotal;
 
   if (count === 0) {
     return (
@@ -43,6 +42,12 @@ function CartPage() {
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
+          {overLimitItems.length > 0 && (
+            <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+              <div className="font-semibold">{t("pickup.cartBlocked")}</div>
+              <div className="mt-1">{t("pickup.fixCart")}</div>
+            </div>
+          )}
           {items.map(({ product, qty }) => (
             <CartLine
               key={product.id}
@@ -52,6 +57,7 @@ function CartPage() {
               price={product.price}
               unit={product.unit}
               qty={qty}
+              stock={stockOf(product.id)}
               removeLabel={t("cart.remove")}
               decreaseLabel={t("card.decrease")}
               increaseLabel={t("card.increase")}
@@ -64,16 +70,21 @@ function CartPage() {
 
         <aside className="h-fit rounded-2xl border border-border bg-card p-6 shadow-sm lg:sticky lg:top-20">
           <h2 className="mb-4 text-xl font-extrabold">{t("ui.orderSummary")}</h2>
+          <div className="mb-4 rounded-xl bg-secondary p-4 text-sm">
+            <div className="font-semibold text-foreground">{t("pickup.branch")}</div>
+            <div className="mt-1 text-primary">{selectedBranch}</div>
+            <div className="mt-2 text-muted-foreground">{t("pickup.free")}</div>
+          </div>
           <div className="space-y-2.5 text-sm">
             <Row label={t("cart.subtotal")} value={formatRWF(subtotal)} />
-            <Row label={t("cart.delivery")} value={delivery === 0 ? t("cart.free") : formatRWF(delivery)} />
+            <Row label={t("pickup.summary")} value={t("pickup.free")} />
           </div>
           <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4 font-bold">
             <span>{t("cart.total")}</span>
             <span className="text-2xl tabular-nums text-primary">{formatRWF(total)}</span>
           </div>
           {user ? (
-            <Button asChild size="lg" className="mt-6 w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90 glow-primary">
+            <Button asChild size="lg" disabled={overLimitItems.length > 0} className="mt-6 w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90 glow-primary">
               <Link to="/checkout">{t("ui.proceedToCheckout")}</Link>
             </Button>
           ) : (
@@ -100,6 +111,7 @@ function CartLine(p: {
   price: number;
   unit: string;
   qty: number;
+  stock: number;
   removeLabel: string;
   decreaseLabel: string;
   increaseLabel: string;
@@ -127,6 +139,9 @@ function CartLine(p: {
         </div>
         <div className="mt-1.5 text-sm font-bold tabular-nums text-primary">
           {t("card.lineTotal")}: {formatRWF(lineTotal)}
+        </div>
+        <div className="mt-1 text-xs text-muted-foreground">
+          {p.stock} {t("pickup.availableNow")}
         </div>
       </div>
       <div className="flex h-10 items-center rounded-xl border border-primary/40 bg-primary/8 px-2">

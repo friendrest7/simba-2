@@ -1,4 +1,5 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
+import { extraDictionaries } from "@/lib/i18n-extra";
 
 export type Lang = "en" | "rw" | "sw" | "tr";
 
@@ -831,7 +832,12 @@ const tr: Dict = {
   "error.goHome": "Ana sayfaya git",
 };
 
-const dictionaries: Record<Lang, Dict> = { en, rw, sw, tr };
+const dictionaries: Record<Lang, Dict> = {
+  en: { ...en, ...extraDictionaries.en },
+  rw: { ...rw, ...extraDictionaries.rw },
+  sw: { ...sw, ...extraDictionaries.sw },
+  tr: { ...tr, ...extraDictionaries.tr },
+};
 
 export const LANGS: { code: Lang; label: string; flag: string }[] = [
   { code: "en", label: "English", flag: "EN" },

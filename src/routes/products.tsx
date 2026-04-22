@@ -3,8 +3,10 @@ import { useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
-import { CATEGORIES, PRODUCTS, categoryLabel, searchProducts } from "@/lib/products";
+import { CATEGORIES, PRODUCTS, categoryLabel } from "@/lib/products";
 import { useI18n } from "@/lib/i18n";
+import { conversationalSearch } from "@/lib/demo-store";
+import { useCart } from "@/lib/cart";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
 type SearchParams = { q?: string; cat?: string; sort?: string; inStock?: string };
@@ -27,6 +29,7 @@ export const Route = createFileRoute("/products")({
 
 function ProductsPage() {
   const { t } = useI18n();
+  const { selectedBranch, stockOf } = useCart();
   const search = Route.useSearch();
   const navigate = Route.useNavigate();
   const [q, setQ] = useState(search.q ?? "");
@@ -40,9 +43,9 @@ function ProductsPage() {
   };
 
   const results = useMemo(() => {
-    let list = q.trim() ? searchProducts(q) : [...PRODUCTS];
+    let list = q.trim() ? conversationalSearch(q, selectedBranch).products : [...PRODUCTS];
     if (cat) list = list.filter((p) => p.category === cat);
-    if (inStockOnly) list = list.filter((p) => p.inStock);
+    if (inStockOnly) list = list.filter((p) => stockOf(p.id) > 0);
     switch (sort) {
       case "priceAsc":
         list.sort((a, b) => a.price - b.price);
@@ -57,7 +60,7 @@ function ProductsPage() {
         break;
     }
     return list;
-  }, [q, cat, sort, inStockOnly]);
+  }, [q, cat, sort, inStockOnly, selectedBranch, stockOf]);
 
   const clearFilters = () => {
     setQ("");
@@ -65,9 +68,19 @@ function ProductsPage() {
     setShowFilters(false);
   };
 
+  const searchExplanation = useMemo(() => conversationalSearch(q || "popular essentials", selectedBranch).explanation, [q, selectedBranch]);
+
   return (
     <div className="container mx-auto px-4 py-8">
       <h1 className="mb-6 text-3xl font-extrabold tracking-tight md:text-4xl">{t("section.allProducts")}</h1>
+
+      <div className="mb-6 rounded-[2rem] border border-border bg-card p-5 shadow-sm">
+        <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">{t("products.aiTitle")}</div>
+        <h2 className="mt-1 text-2xl font-black tracking-tight">{selectedBranch}</h2>
+        <p className="mt-2 text-sm text-muted-foreground">{t("products.aiBody")}</p>
+        <p className="mt-2 text-sm text-primary">{searchExplanation}</p>
+        <p className="mt-2 text-xs text-muted-foreground">{t("products.aiExamples")}</p>
+      </div>
 
       <div className="sticky top-16 z-30 mb-8 flex flex-col gap-4 bg-background/90 py-4 backdrop-blur md:flex-row">
         <div className="relative flex-1">
@@ -78,7 +91,7 @@ function ProductsPage() {
               setQ(e.target.value);
               updateSearch({ q: e.target.value || undefined });
             }}
-            placeholder={t("search.placeholder")}
+            placeholder={t("hero.searchHint2")}
             className="h-12 rounded-full border-input bg-muted/50 pl-10 text-base focus-visible:ring-primary/50"
           />
         </div>
@@ -148,10 +161,10 @@ function ProductsPage() {
       {results.length === 0 ? (
         <div className="py-20 text-center">
           <div className="mx-auto max-w-md rounded-[1.75rem] border border-border/70 bg-card p-8 shadow-sm">
-            <h2 className="text-xl font-black tracking-tight text-foreground">Search not found</h2>
+            <h2 className="text-xl font-black tracking-tight text-foreground">{t("products.emptyTitle")}</h2>
             <p className="mt-3 text-lg text-muted-foreground">{t("ui.noProductsMatch")}</p>
             <p className="mt-2 text-sm text-muted-foreground">
-              Try a different keyword, clear the current search, or return to the full catalog.
+              {t("products.emptyBody")}
             </p>
           </div>
           <Link to="/products" className="mt-4 inline-block font-semibold text-primary hover:underline">

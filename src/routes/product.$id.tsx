@@ -36,9 +36,10 @@ function ProductNotFound() {
 
 function ProductPage() {
   const { product } = Route.useLoaderData();
-  const { add, qtyOf, setQty } = useCart();
+  const { add, qtyOf, setQty, stockOf, selectedBranch } = useCart();
   const { t } = useI18n();
   const qty = qtyOf(product.id);
+  const branchStock = stockOf(product.id);
   const [imgError, setImgError] = useState(false);
   const [showDetails, setShowDetails] = useState(false);
 
@@ -71,9 +72,12 @@ function ProductPage() {
             <span className="text-4xl font-black tabular-nums text-primary">{formatRWF(product.price)}</span>
             <span className="text-sm text-muted-foreground">/ {product.unit}</span>
           </div>
-          <span className={`mt-4 inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${product.inStock ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
-            {product.inStock ? t("card.inStock") : t("card.outOfStock")}
+            <span className={`mt-4 inline-flex w-fit items-center gap-1.5 rounded-full px-3 py-1 text-xs font-semibold ${branchStock > 0 ? "bg-success/15 text-success" : "bg-destructive/15 text-destructive"}`}>
+            {branchStock > 0 ? t("card.inStock") : t("card.outOfStock")}
           </span>
+          <div className="mt-2 text-sm font-semibold text-primary">
+            {selectedBranch}: {branchStock} {t("pickup.availableNow")}
+          </div>
 
           <div className="mt-6 flex flex-col gap-3">
             {qty > 0 && (
@@ -88,7 +92,7 @@ function ProductPage() {
               </div>
             )}
             {qty === 0 && (
-              <Button size="lg" onClick={() => add(product)} disabled={!product.inStock} className="h-12 rounded-full gradient-brand px-6 text-brand-foreground hover:opacity-90 gap-2 glow-primary">
+              <Button size="lg" onClick={() => add(product)} disabled={branchStock <= 0} className="h-12 rounded-full gradient-brand px-6 text-brand-foreground hover:opacity-90 gap-2 glow-primary">
                 <ShoppingBag className="h-5 w-5" /> {t("card.add")}
               </Button>
             )}
