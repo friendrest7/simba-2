@@ -1,9 +1,12 @@
 import { createFileRoute, Navigate } from "@tanstack/react-router";
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
+import {
+  type OrderStatus,
+} from "@/lib/demo-store";
 import {
   getBranchInventory,
   getBranchReviews,
@@ -11,8 +14,7 @@ import {
   getOrdersForBranches,
   updateBranchStock,
   updateOrderStatus,
-  type OrderStatus,
-} from "@/lib/demo-store";
+} from "@/lib/data";
 import { formatRWF } from "@/lib/products";
 
 export const Route = createFileRoute("/branch-dashboard")({
@@ -25,29 +27,51 @@ function BranchDashboardPage() {
   const { t } = useI18n();
   const [refreshKey, setRefreshKey] = useState(0);
   const [inventorySearch, setInventorySearch] = useState("");
+  const [summary, setSummary] = useState({ orderCount: 0, readyCount: 0, lowStockCount: 0, zeroStockCount: 0 });
+  const [orders, setOrders] = useState<Awaited<ReturnType<typeof getOrdersForBranches>>>([]);
+  const [inventory, setInventory] = useState<Array<Awaited<ReturnType<typeof getBranchInventory>>[number]>>([]);
+  const [reviews, setReviews] = useState<Awaited<ReturnType<typeof getBranchReviews>>>([]);
   const isAllowed = user?.role === "manager" || user?.role === "staff";
   const branches = user?.branches ?? [];
-  const summary = useMemo(() => getDashboardSummary(branches), [branches, refreshKey]);
-  const orders = useMemo(() => getOrdersForBranches(branches), [branches, refreshKey]);
-  const inventory = useMemo(
+  const filteredInventory = useMemo(
     () =>
-      branches.flatMap((branch) =>
-        getBranchInventory(branch)
-          .filter((product) => !inventorySearch || product.name.toLowerCase().includes(inventorySearch.toLowerCase()))
-          .slice(0, 30)
-          .map((product) => ({ ...product, branch })),
-      ),
-    [branches, inventorySearch, refreshKey],
+      inventory
+        .filter((product) => !inventorySearch || product.name.toLowerCase().includes(inventorySearch.toLowerCase()))
+        .slice(0, 18),
+    [inventory, inventorySearch],
   );
-  const reviews = useMemo(() => branches.flatMap((branch) => getBranchReviews(branch)), [branches, refreshKey]);
 
-  const onStatusChange = (orderId: string, status: OrderStatus) => {
-    updateOrderStatus(orderId, status);
+  useEffect(() => {
+    let active = true;
+    if (!branches.length) return;
+
+    void (async () => {
+      const [nextSummary, nextOrders, inventoryLists, reviewLists] = await Promise.all([
+        getDashboardSummary(branches),
+        getOrdersForBranches(branches),
+        Promise.all(branches.map((branch) => getBranchInventory(branch))),
+        Promise.all(branches.map((branch) => getBranchReviews(branch))),
+      ]);
+
+      if (!active) return;
+      setSummary(nextSummary);
+      setOrders(nextOrders);
+      setInventory(inventoryLists.flat());
+      setReviews(reviewLists.flat());
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [branches, refreshKey]);
+
+  const onStatusChange = async (orderId: string, status: OrderStatus) => {
+    await updateOrderStatus(orderId, status);
     setRefreshKey((value) => value + 1);
   };
 
-  const onStockChange = (branch: string, productId: number, stock: number) => {
-    updateBranchStock(branch as never, productId, stock);
+  const onStockChange = async (branch: string, productId: number, stock: number) => {
+    await updateBranchStock(branch as never, productId, stock);
     setRefreshKey((value) => value + 1);
   };
 
@@ -134,7 +158,7 @@ function BranchDashboardPage() {
               />
             </div>
             <div className="mt-4 space-y-3">
-              {inventory.slice(0, 18).map((product) => (
+              {filteredInventory.map((product) => (
                 <InventoryRow
                   key={`${product.branch}-${product.id}`}
                   branch={product.branch}

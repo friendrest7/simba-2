@@ -6,6 +6,7 @@ import { ProductCard } from "@/components/ProductCard";
 import { CATEGORIES, PRODUCTS, categoryLabel } from "@/lib/products";
 import { useI18n } from "@/lib/i18n";
 import { conversationalSearch } from "@/lib/demo-store";
+import { formatSearchExplanation } from "@/lib/search-explanation";
 import { useCart } from "@/lib/cart";
 import { Search, SlidersHorizontal, X } from "lucide-react";
 
@@ -68,7 +69,10 @@ function ProductsPage() {
     setShowFilters(false);
   };
 
-  const searchExplanation = useMemo(() => conversationalSearch(q || "popular essentials", selectedBranch).explanation, [q, selectedBranch]);
+  const searchExplanation = useMemo(
+    () => formatSearchExplanation(conversationalSearch(q || t("search.defaultTerms"), selectedBranch), t),
+    [q, selectedBranch, t],
+  );
 
   return (
     <div className="container mx-auto px-4 py-8">

@@ -285,8 +285,35 @@ function CheckoutPage() {
             <span className="text-2xl tabular-nums text-primary">{formatRWF(subtotal)}</span>
           </div>
           {overLimitItems.length > 0 && (
-            <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-              {t("pickup.cartBlocked")}
+            <div className="mt-4 rounded-xl border border-destructive/25 bg-destructive/8 p-4 text-sm">
+              <div className="font-bold text-destructive">{t("pickup.cartBlocked")}</div>
+              <div className="mt-1 text-xs text-muted-foreground">
+                {t("cart.branchStockIssue").replace("{branch}", formData.branch)}
+              </div>
+              <div className="mt-3 space-y-2">
+                {overLimitItems.map((item) => (
+                  <div key={item.product.id} className="rounded-lg border border-destructive/15 bg-background/80 p-2">
+                    <div className="font-semibold text-foreground">{item.product.name}</div>
+                    <div className="mt-1 text-xs text-destructive">
+                      {t("cart.stockShortfall")
+                        .replace("{requested}", String(item.qty))
+                        .replace("{available}", String(item.stock))}
+                    </div>
+                    <div className="mt-1 text-xs text-muted-foreground">
+                      {item.suggestedBranches.length > 0 ? (
+                        <>
+                          {t("cart.availableAt")}{" "}
+                          <span className="font-bold text-primary">
+                            {item.suggestedBranches.map((candidate) => `${candidate.branch} (${candidate.stock})`).join(", ")}
+                          </span>
+                        </>
+                      ) : (
+                        <span className="font-semibold text-destructive">{t("cart.noBranchSuggestion")}</span>
+                      )}
+                    </div>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
           {error && (

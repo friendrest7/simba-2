@@ -8,6 +8,7 @@ import { BranchReviews } from "@/components/BranchReviews";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { conversationalSearch, getBranchReviewSummary, PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
+import { formatSearchExplanation } from "@/lib/search-explanation";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -30,14 +31,30 @@ function HomePage() {
   const [q, setQ] = useState("");
 
   const featuredResults = useMemo(
-    () => conversationalSearch(q || "popular grocery essentials", selectedBranch).products.slice(0, 10),
-    [q, selectedBranch],
+    () => conversationalSearch(q || t("search.defaultTerms"), selectedBranch).products.slice(0, 10),
+    [q, selectedBranch, t],
+  );
+
+  const heroSearchExplanation = useMemo(
+    () => formatSearchExplanation(conversationalSearch(q || t("search.defaultTerms"), selectedBranch), t),
+    [q, selectedBranch, t],
   );
 
   return (
     <div className="pb-24">
       <section className="relative overflow-hidden bg-[linear-gradient(135deg,#083325_0%,#0b4f39_45%,#0a241b_100%)] text-white">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_top_right,rgba(255,184,77,0.18),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_28%)]" />
+        <video
+          className="absolute inset-0 h-full w-full object-cover opacity-38"
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="metadata"
+          aria-hidden="true"
+        >
+          <source src="/simba-landing-hero.mp4" type="video/mp4" />
+        </video>
+        <div className="absolute inset-0 bg-[linear-gradient(135deg,rgba(8,51,37,0.9),rgba(11,79,57,0.74)_48%,rgba(10,36,27,0.94)),radial-gradient(circle_at_top_right,rgba(255,184,77,0.2),transparent_24%),radial-gradient(circle_at_bottom_left,rgba(255,255,255,0.08),transparent_28%)]" />
         <div className="relative mx-auto grid max-w-7xl gap-8 px-4 py-10 md:grid-cols-[1.1fr_0.9fr] md:items-center md:py-16">
           <div>
             <div className="inline-flex items-center gap-2 rounded-full border border-white/10 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em]">
@@ -73,7 +90,7 @@ function HomePage() {
                 </Link>
               </Button>
               <div className="text-sm text-white/70">
-                {count > 0 ? `${count} items · ${subtotal.toLocaleString()} RWF` : t("pickup.free")}
+                {count > 0 ? `${count} items - ${subtotal.toLocaleString()} RWF` : t("pickup.free")}
               </div>
             </div>
           </div>
@@ -113,7 +130,7 @@ function HomePage() {
               </div>
 
               <p className="mt-3 text-sm text-white/75">
-                {conversationalSearch(q || "popular grocery essentials", selectedBranch).explanation}
+                {heroSearchExplanation}
               </p>
             </div>
 

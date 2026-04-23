@@ -1,4 +1,4 @@
-import { PRODUCTS, formatRWF, type Product } from "@/lib/products";
+import { PRODUCTS, type Product } from "@/lib/products";
 
 export const PICKUP_BRANCHES = [
   "Remera",
@@ -33,6 +33,13 @@ type StoredUser = SessionUser & {
 type BranchInventoryRow = {
   productId: number;
   stock: number;
+  updatedAt: string;
+};
+
+export type BranchStorefrontRow = {
+  branch: BranchName;
+  productId: number;
+  isVisible: boolean;
   updatedAt: string;
 };
 
@@ -73,6 +80,7 @@ export type OrderRecord = {
 type DemoState = {
   users: StoredUser[];
   inventory: Record<BranchName, BranchInventoryRow[]>;
+  storefront: Record<BranchName, BranchStorefrontRow[]>;
   orders: OrderRecord[];
   reviews: BranchReview[];
 };
@@ -86,9 +94,17 @@ type SearchIntent = {
 };
 
 export type ConversationalSearchResult = {
-  explanation: string;
+  explanationParts: ConversationalSearchExplanation;
   branch: BranchName;
   products: Product[];
+};
+
+export type ConversationalSearchExplanation = {
+    branch: BranchName;
+    category?: string;
+    maxPrice?: number;
+    inStockOnly: boolean;
+    terms: string[];
 };
 
 const STATE_KEY = "simba.demo.state.v2";
@@ -151,7 +167,7 @@ function safeReadState(): DemoState | null {
   try {
     const raw = localStorage.getItem(STATE_KEY);
     if (!raw) return null;
-    return JSON.parse(raw) as DemoState;
+    return normalizeState(JSON.parse(raw) as Partial<DemoState>);
   } catch {
     return null;
   }
@@ -182,6 +198,39 @@ function seededStock(productId: number, branchIndex: number, available: boolean)
   return 4 + (seed % 18);
 }
 
+function seededVisibility(productId: number, branchIndex: number, stock: number) {
+  if (stock <= 0) return false;
+  return ((productId % 13) + branchIndex) % 7 !== 0;
+}
+
+function normalizeState(state: Partial<DemoState>): DemoState {
+  const initial = createInitialState();
+  const inventory = (state.inventory ?? initial.inventory) as Record<BranchName, BranchInventoryRow[]>;
+  const storefront = (state.storefront ?? createInitialStorefront(inventory)) as Record<BranchName, BranchStorefrontRow[]>;
+
+  return {
+    users: state.users ?? initial.users,
+    inventory,
+    storefront,
+    orders: state.orders ?? [],
+    reviews: state.reviews ?? initial.reviews,
+  };
+}
+
+function createInitialStorefront(inventory: Record<BranchName, BranchInventoryRow[]>) {
+  return Object.fromEntries(
+    PICKUP_BRANCHES.map((branch, branchIndex) => [
+      branch,
+      inventory[branch].map((row) => ({
+        branch,
+        productId: row.productId,
+        isVisible: seededVisibility(row.productId, branchIndex, row.stock),
+        updatedAt: nowIso(),
+      })),
+    ]),
+  ) as Record<BranchName, BranchStorefrontRow[]>;
+}
+
 function createInitialState(): DemoState {
   const users: StoredUser[] = [
     {
@@ -192,6 +241,24 @@ function createInitialState(): DemoState {
       password: "simba123",
       role: "manager",
       branches: [...PICKUP_BRANCHES],
+    },
+    {
+      id: "admin-remera",
+      name: "Bella Remera Admin",
+      email: "admin.remera@simba.demo",
+      phone: "0788000004",
+      password: "simba123",
+      role: "staff",
+      branches: ["Remera"],
+    },
+    {
+      id: "admin-kimironko",
+      name: "David Kimironko Admin",
+      email: "admin.kimironko@simba.demo",
+      phone: "0788000005",
+      password: "simba123",
+      role: "staff",
+      branches: ["Kimironko"],
     },
     {
       id: "staff-kacyiru",
@@ -257,6 +324,7 @@ function createInitialState(): DemoState {
   return {
     users,
     inventory,
+    storefront: createInitialStorefront(inventory),
     orders: [],
     reviews,
   };
@@ -386,6 +454,67 @@ export function registerCustomer(input: {
   return { ok: true as const, user: sessionUser };
 }
 
+export function authenticateGoogleUser(input: {
+  email: string;
+  name: string;
+  googleSubject: string;
+}) {
+  return authenticateSocialUser({
+    email: input.email,
+    name: input.name,
+    provider: "google",
+    subject: input.googleSubject,
+  });
+}
+
+export function authenticateSocialUser(input: {
+  email: string;
+  name: string;
+  provider: "google" | "facebook";
+  subject: string;
+}) {
+  const email = input.email.trim().toLowerCase();
+  const name = input.name.trim();
+
+  if (!email || !name) {
+    return { ok: false as const, error: "auth.socialInvalidProfile" };
+  }
+
+  const state = readState();
+  const existingUser = state.users.find((user) => user.email.toLowerCase() === email);
+
+  if (existingUser) {
+    const nextUser: StoredUser = {
+      ...existingUser,
+      name,
+    };
+
+    saveState((current) => ({
+      ...current,
+      users: current.users.map((user) => (user.id === existingUser.id ? nextUser : user)),
+    }));
+
+    const sessionUser = toSessionUser(nextUser);
+    setSessionUser(sessionUser);
+    return { ok: true as const, user: sessionUser };
+  }
+
+  const user: StoredUser = {
+    id: `${input.provider}-${input.subject}`,
+    name,
+    email,
+    phone: "",
+    password: "",
+    role: "customer",
+    branches: [],
+  };
+
+  saveState((current) => ({ ...current, users: [...current.users, user] }));
+  const sessionUser = toSessionUser(user);
+  setSessionUser(sessionUser);
+  return { ok: true as const, user: sessionUser };
+}
+
 export function getBranchInventory(branch: BranchName) {
   const state = readState();
   const rows = state.inventory[branch] ?? [];
@@ -407,6 +536,31 @@ export function getBranchStock(branch: BranchName, productId: number) {
   return state.inventory[branch]?.find((row) => row.productId === productId)?.stock ?? 0;
 }
 
+export function getBranchStorefront(branch: BranchName) {
+  const state = readState();
+  return state.storefront[branch] ?? [];
+}
+
+export function isProductPublished(branch: BranchName, productId: number) {
+  return getBranchStorefront(branch).find((row) => row.productId === productId)?.isVisible ?? false;
+}
+
+export function getBranchSellableStock(branch: BranchName, productId: number) {
+  const stock = getBranchStock(branch, productId);
+  return stock > 0 && isProductPublished(branch, productId) ? stock : 0;
+}
+
+export function getBranchSellableStockMap(branch: BranchName) {
+  return Object.fromEntries(
+    PRODUCTS.map((product) => [product.id, getBranchSellableStock(branch, product.id)]),
+  ) as Record<number, number>;
+}
+
+export function getSellableProductsForBranch(branch: BranchName) {
+  const sellableStock = getBranchSellableStockMap(branch);
+  return PRODUCTS.filter((product) => (sellableStock[product.id] ?? 0) > 0);
+}
+
 export function updateBranchStock(branch: BranchName, productId: number, nextStock: number) {
   saveState((current) => ({
     ...current,
@@ -418,6 +572,46 @@ export function updateBranchStock(branch: BranchName, productId: number, nextSto
           : row,
       ),
     },
+  }));
+}
+
+export function setBranchProductVisibility(branch: BranchName, productId: number, isVisible: boolean) {
+  const stock = getBranchStock(branch, productId);
+  if (isVisible && stock <= 0) {
+    return { ok: false as const, error: "dashboard.publishRequiresStock" };
+  }
+
+  saveState((current) => {
+    const rows = current.storefront[branch] ?? [];
+    const existing = rows.some((row) => row.productId === productId);
+    const nextRow: BranchStorefrontRow = {
+      branch,
+      productId,
+      isVisible,
+      updatedAt: nowIso(),
+    };
+
+    return {
+      ...current,
+      storefront: {
+        ...current.storefront,
+        [branch]: existing
+          ? rows.map((row) => (row.productId === productId ? nextRow : row))
+          : [...rows, nextRow],
+      },
+    };
+  });
+
+  return { ok: true as const };
+}
+
+export function getAdminBranchCatalog(branch: BranchName) {
+  const visibility = new Map(getBranchStorefront(branch).map((row) => [row.productId, row.isVisible]));
+
+  return getBranchInventory(branch).map((product) => ({
+    ...product,
+    isVisible: visibility.get(product.id) ?? false,
+    isSellable: product.stock > 0 && (visibility.get(product.id) ?? false),
   }));
 }
 
@@ -655,15 +849,15 @@ export function conversationalSearch(query: string, selectedBranch: BranchName):
     })
     .slice(0, 36);
 
-  const explanationParts = [`Showing matches for ${branch}`];
-  if (intent.category) explanationParts.push(intent.category);
-  if (intent.maxPrice !== undefined) explanationParts.push(`under ${formatRWF(intent.maxPrice)}`);
-  if (intent.inStockOnly) explanationParts.push("currently in stock");
-  if (intent.searchTerms.length) explanationParts.push(`matching "${intent.searchTerms.join(" ")}"`);
-
   return {
     branch,
     products: filtered,
-    explanation: `${explanationParts.join(" · ")}.`,
+    explanationParts: {
+      branch,
+      category: intent.category,
+      maxPrice: intent.maxPrice,
+      inStockOnly: intent.inStockOnly,
+      terms: intent.searchTerms,
+    },
   };
 }

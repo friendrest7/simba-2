@@ -1,12 +1,21 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import {
   authenticateUser,
+  authenticateGoogleUser,
+  authenticateSocialUser,
   ensureDemoState,
   getSessionUser,
   registerCustomer,
   signOutUser,
   type SessionUser,
 } from "@/lib/demo-store";
+import {
+  getSupabaseBrowserClient,
+  getSupabaseSessionUser,
+  hasSupabaseConfig,
+  listenToSupabaseAuth,
+} from "@/lib/supabase";
+import { getProfile, upsertProfile } from "@/lib/data";
 
 type SignInInput = {
   credential: string;
@@ -23,22 +32,94 @@ type SignUpInput = {
 const Ctx = createContext<{
   user: SessionUser | null;
   hydrated: boolean;
-  signIn: (input: SignInInput) => { ok: true } | { ok: false; error: string };
-  signUp: (input: SignUpInput) => { ok: true } | { ok: false; error: string };
-  signOut: () => void;
+  signIn: (input: SignInInput) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signUp: (input: SignUpInput) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signInWithGoogle: (input: {
+    email: string;
+    name: string;
+    googleSubject: string;
+  }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signInWithFacebook: (input: {
+    email: string;
+    name: string;
+    facebookSubject: string;
+  }) => Promise<{ ok: true } | { ok: false; error: string }>;
+  signOut: () => Promise<void>;
 } | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const [user, setUser] = useState<SessionUser | null>(null);
   const [hydrated, setHydrated] = useState(false);
 
+  const syncSupabaseProfile = async (sessionUser: SessionUser | null) => {
+    if (!sessionUser || !hasSupabaseConfig()) {
+      return sessionUser;
+    }
+
+    await upsertProfile({
+      userId: sessionUser.id,
+      fullName: sessionUser.name,
+      phone: sessionUser.phone,
+    });
+
+    const profile = await getProfile(sessionUser.id);
+    if (!profile) {
+      return sessionUser;
+    }
+
+    return {
+      ...sessionUser,
+      name: profile.full_name || sessionUser.name,
+      phone: profile.phone || sessionUser.phone,
+      role: profile.role || sessionUser.role,
+      branches: (profile.assigned_branches ?? []) as SessionUser["branches"],
+    };
+  };
+
   useEffect(() => {
     ensureDemoState();
-    setUser(getSessionUser());
-    setHydrated(true);
+    const bootstrap = async () => {
+      if (hasSupabaseConfig()) {
+        const sessionUser = await getSupabaseSessionUser();
+        setUser(await syncSupabaseProfile(sessionUser));
+      } else {
+        setUser(getSessionUser());
+      }
+      setHydrated(true);
+    };
+
+    void bootstrap();
+
+    const subscription = listenToSupabaseAuth((nextUser) => {
+      void (async () => {
+        setUser(await syncSupabaseProfile(nextUser));
+      })();
+    });
+
+    return () => {
+      subscription?.unsubscribe();
+    };
   }, []);
 
-  const signIn = (input: SignInInput) => {
+  const signIn = async (input: SignInInput) => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const normalizedCredential = input.credential.trim();
+      const isEmail = normalizedCredential.includes("@");
+      const credentials = isEmail
+        ? { email: normalizedCredential, password: input.password }
+        : { phone: normalizedCredential, password: input.password };
+
+      const { error } = await supabase.auth.signInWithPassword(credentials);
+      if (error) {
+        return { ok: false as const, error: error.message || "auth.supabaseSignInFailed" };
+      }
+
+      const nextUser = await syncSupabaseProfile(await getSupabaseSessionUser());
+      setUser(nextUser);
+      return { ok: true as const };
+    }
+
     const result = authenticateUser(input);
     if (!result.ok) {
       return result;
@@ -48,7 +129,29 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true as const };
   };
 
-  const signUp = (input: SignUpInput) => {
+  const signUp = async (input: SignUpInput) => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      const { data, error } = await supabase.auth.signUp({
+        email: input.email.trim(),
+        password: input.password,
+        options: {
+          data: {
+            name: input.name.trim(),
+            phone: input.phone.trim(),
+          },
+        },
+      });
+
+      if (error) {
+        return { ok: false as const, error: error.message || "auth.supabaseSignUpFailed" };
+      }
+
+      const nextUser = await syncSupabaseProfile(await getSupabaseSessionUser());
+      setUser(nextUser);
+      return { ok: true as const };
+    }
+
     const result = registerCustomer(input);
     if (!result.ok) {
       return result;
@@ -58,12 +161,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { ok: true as const };
   };
 
-  const signOut = () => {
+  const signInWithGoogle = async (input: {
+    email: string;
+    name: string;
+    googleSubject: string;
+  }) => {
+    const result = authenticateGoogleUser(input);
+    if (!result.ok) {
+      return result;
+    }
+
+    setUser(result.user);
+    return { ok: true as const };
+  };
+
+  const signInWithFacebook = async (input: {
+    email: string;
+    name: string;
+    facebookSubject: string;
+  }) => {
+    const result = authenticateSocialUser({
+      email: input.email,
+      name: input.name,
+      provider: "facebook",
+      subject: input.facebookSubject,
+    });
+    if (!result.ok) {
+      return result;
+    }
+
+    setUser(result.user);
+    return { ok: true as const };
+  };
+
+  const signOut = async () => {
+    const supabase = getSupabaseBrowserClient();
+    if (supabase) {
+      await supabase.auth.signOut();
+    }
     signOutUser();
     setUser(null);
   };
 
-  return <Ctx.Provider value={{ user, hydrated, signIn, signUp, signOut }}>{children}</Ctx.Provider>;
+  return (
+    <Ctx.Provider value={{ user, hydrated, signIn, signUp, signInWithGoogle, signInWithFacebook, signOut }}>
+      {children}
+    </Ctx.Provider>
+  );
 }
 
 export const useAuth = () => {

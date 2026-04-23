@@ -5,10 +5,12 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { useState } from "react";
+import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
+import { useEffect, useRef, useState } from "react";
 import { LockKeyhole, Mail, Sparkles, UserRound } from "lucide-react";
 
 type SignInSearch = { redirect?: string };
+type AuthTab = "signin" | "signup";
 
 export const Route = createFileRoute("/signin")({
   component: SignInPage,
@@ -20,37 +22,213 @@ export const Route = createFileRoute("/signin")({
 
 function SignInPage() {
   const { t } = useI18n();
-  const { signIn, signUp } = useAuth();
+  const { user, hydrated, signIn, signUp, signInWithGoogle, signInWithFacebook } = useAuth();
   const navigate = useNavigate();
   const { redirect } = useSearch({ from: "/signin" }) as SignInSearch;
   const [authError, setAuthError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<AuthTab>("signin");
   const [signInData, setSignInData] = useState({ credential: "", password: "" });
   const [signUpData, setSignUpData] = useState({ name: "", email: "", phone: "", password: "" });
+  const googleButtonRef = useRef<HTMLDivElement | null>(null);
+  const [googleLoaded, setGoogleLoaded] = useState(false);
+  const clientId = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+  const facebookAppId = import.meta.env.VITE_FACEBOOK_APP_ID;
 
   const goNext = () => {
     navigate({ to: (redirect as "/checkout") || "/" });
   };
 
-  const submitSignIn = (e: React.FormEvent) => {
+  const switchAuthTab = (nextTab: AuthTab) => {
+    setAuthError(null);
+    setActiveTab(nextTab);
+  };
+
+  useEffect(() => {
+    if (hydrated && user) {
+      goNext();
+    }
+  }, [hydrated, user]);
+
+  useEffect(() => {
+    if (!clientId || !googleButtonRef.current) {
+      return;
+    }
+
+    let cancelled = false;
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-google-identity="true"]');
+    const supabase = getSupabaseBrowserClient();
+
+    const initialize = () => {
+      if (cancelled || !window.google?.accounts?.id || !googleButtonRef.current) {
+        return;
+      }
+
+      googleButtonRef.current.innerHTML = "";
+      window.google.accounts.id.initialize({
+        client_id: clientId,
+        callback: (response) => {
+          void (async () => {
+            try {
+              if (supabase) {
+                const { error } = await supabase.auth.signInWithIdToken({
+                  provider: "google",
+                  token: response.credential ?? "",
+                });
+
+                if (error) {
+                  setAuthError(error.message || t("auth.supabaseGoogleFailed"));
+                  return;
+                }
+
+                setAuthError(null);
+                goNext();
+                return;
+              }
+
+              const payload = parseGoogleCredential(response.credential);
+              const result = await signInWithGoogle({
+                email: payload.email,
+                name: payload.name,
+                googleSubject: payload.sub,
+              });
+
+              if (!result.ok) {
+                setAuthError(t(result.error));
+                return;
+              }
+
+              setAuthError(null);
+              goNext();
+            } catch {
+              setAuthError(t("auth.googleFailed"));
+            }
+          })();
+        },
+        cancel_on_tap_outside: true,
+      });
+
+      window.google.accounts.id.renderButton(googleButtonRef.current, {
+        theme: "outline",
+        size: "large",
+        text: "continue_with",
+        shape: "pill",
+        width: "100%",
+        logo_alignment: "left",
+      });
+      setGoogleLoaded(true);
+    };
+
+    if (existingScript) {
+      if (window.google?.accounts?.id) {
+        initialize();
+      } else {
+        existingScript.addEventListener("load", initialize, { once: true });
+      }
+
+      return () => {
+        cancelled = true;
+      };
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    script.dataset.googleIdentity = "true";
+    script.onload = initialize;
+    script.onerror = () => setAuthError(t("auth.googleScriptFailed"));
+    document.head.appendChild(script);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [clientId, signInWithGoogle, t]);
+
+  const submitSignIn = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const result = signIn(signInData);
+    const result = await signIn(signInData);
     if (!result.ok) {
-      setAuthError(t(result.error));
+      setAuthError(result.error.includes("auth.") ? t(result.error) : result.error);
       return;
     }
     goNext();
   };
 
-  const submitSignUp = (e: React.FormEvent) => {
+  const submitSignUp = async (e: React.FormEvent) => {
     e.preventDefault();
     setAuthError(null);
-    const result = signUp(signUpData);
+    const result = await signUp(signUpData);
     if (!result.ok) {
-      setAuthError(t(result.error));
+      setAuthError(result.error.includes("auth.") ? t(result.error) : result.error);
+      return;
+    }
+    if (hasSupabaseConfig()) {
+      setAuthError(t("auth.supabaseEmailConfirm"));
       return;
     }
     goNext();
+  };
+
+  const signInWithFacebookProvider = async () => {
+    setAuthError(null);
+    const supabase = getSupabaseBrowserClient();
+
+    if (supabase) {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: "facebook",
+        options: {
+          redirectTo: window.location.href,
+        },
+      });
+
+      if (error) {
+        setAuthError(error.message || t("auth.facebookFailed"));
+      }
+      return;
+    }
+
+    if (!facebookAppId) {
+      setAuthError(t("auth.facebookUnavailable"));
+      return;
+    }
+
+    try {
+      await loadFacebookSdk(facebookAppId);
+      window.FB?.login(
+        (response) => {
+          if (!response.authResponse) {
+            setAuthError(t("auth.facebookFailed"));
+            return;
+          }
+
+          window.FB?.api("/me", { fields: "id,name,email" }, (profile) => {
+            void (async () => {
+              if (!profile.id || !profile.name || !profile.email || profile.error) {
+                setAuthError(t("auth.socialInvalidProfile"));
+                return;
+              }
+
+              const result = await signInWithFacebook({
+                email: profile.email,
+                name: profile.name,
+                facebookSubject: profile.id,
+              });
+
+              if (!result.ok) {
+                setAuthError(t(result.error));
+                return;
+              }
+
+              goNext();
+            })();
+          });
+        },
+        { scope: "public_profile,email" },
+      );
+    } catch {
+      setAuthError(t("auth.facebookFailed"));
+    }
   };
 
   return (
@@ -88,7 +266,7 @@ function SignInPage() {
         </div>
 
         <div className="rounded-[2rem] border border-border bg-card/90 p-8 shadow-xl backdrop-blur">
-          <Tabs defaultValue="signin">
+          <Tabs value={activeTab} onValueChange={(value) => switchAuthTab(value as AuthTab)}>
             <TabsList className="grid w-full grid-cols-2 rounded-full">
               <TabsTrigger value="signin" className="gap-2 rounded-full">
                 <LockKeyhole className="h-4 w-4" />
@@ -102,6 +280,35 @@ function SignInPage() {
 
             <TabsContent value="signin">
               <form onSubmit={submitSignIn} className="mt-6 space-y-4">
+                <div className="space-y-3">
+                  <div ref={googleButtonRef} className="min-h-11" />
+                  {clientId && !googleLoaded && !authError && (
+                    <div className="rounded-xl border border-border bg-background px-4 py-3 text-sm text-muted-foreground">
+                      {t("auth.googleReady")}
+                    </div>
+                  )}
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="lg"
+                    className="h-11 w-full rounded-full border-[#1877f2]/30 bg-[#1877f2] text-white shadow-sm hover:bg-[#166fe5] hover:text-white"
+                    onClick={signInWithFacebookProvider}
+                  >
+                    <span className="flex h-5 w-5 items-center justify-center rounded-full bg-white text-sm font-black text-[#1877f2]">
+                      f
+                    </span>
+                    {t("auth.facebook")}
+                  </Button>
+                </div>
+
+                <div className="flex items-center gap-3">
+                  <div className="h-px flex-1 bg-border" />
+                  <span className="text-[11px] font-medium uppercase tracking-[0.16em] text-muted-foreground">
+                    {t("signin.or")}
+                  </span>
+                  <div className="h-px flex-1 bg-border" />
+                </div>
+
                 <div>
                   <Label htmlFor="credential">{t("auth.credential")}</Label>
                   <Input
@@ -129,6 +336,17 @@ function SignInPage() {
                 <Button type="submit" size="lg" className="w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90">
                   {t("signin.cta")}
                 </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  {t("auth.noAccount")}{" "}
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 font-semibold"
+                    onClick={() => switchAuthTab("signup")}
+                  >
+                    {t("auth.signUpTab")}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
 
@@ -184,6 +402,17 @@ function SignInPage() {
                 <Button type="submit" size="lg" className="w-full rounded-full gradient-brand text-brand-foreground hover:opacity-90">
                   {t("auth.createAccount")}
                 </Button>
+                <div className="text-center text-sm text-muted-foreground">
+                  {t("auth.alreadyHaveAccount")}{" "}
+                  <Button
+                    type="button"
+                    variant="link"
+                    className="h-auto p-0 font-semibold"
+                    onClick={() => switchAuthTab("signin")}
+                  >
+                    {t("auth.signInTab")}
+                  </Button>
+                </div>
               </form>
             </TabsContent>
           </Tabs>
@@ -211,4 +440,76 @@ function Feature({ title, body }: { title: string; body: string }) {
 
 function AuthError({ message }: { message: string }) {
   return <div className="rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm text-destructive">{message}</div>;
+}
+
+function parseGoogleCredential(credential?: string) {
+  if (!credential) {
+    throw new Error("Missing credential");
+  }
+
+  const [, payload] = credential.split(".");
+  if (!payload) {
+    throw new Error("Invalid credential");
+  }
+
+  const decoded = JSON.parse(decodeBase64Url(payload)) as {
+    sub?: string;
+    email?: string;
+    name?: string;
+  };
+
+  if (!decoded.sub || !decoded.email || !decoded.name) {
+    throw new Error("Incomplete profile");
+  }
+
+  return {
+    sub: decoded.sub,
+    email: decoded.email,
+    name: decoded.name,
+  };
+}
+
+function decodeBase64Url(value: string) {
+  const normalized = value.replace(/-/g, "+").replace(/_/g, "/");
+  const padded = normalized.padEnd(Math.ceil(normalized.length / 4) * 4, "=");
+  return decodeURIComponent(
+    atob(padded)
+      .split("")
+      .map((char) => `%${char.charCodeAt(0).toString(16).padStart(2, "0")}`)
+      .join(""),
+  );
+}
+
+function loadFacebookSdk(appId: string) {
+  if (window.FB) {
+    return Promise.resolve();
+  }
+
+  return new Promise<void>((resolve, reject) => {
+    const existingScript = document.querySelector<HTMLScriptElement>('script[data-facebook-sdk="true"]');
+
+    window.fbAsyncInit = () => {
+      window.FB?.init({
+        appId,
+        cookie: true,
+        xfbml: false,
+        version: "v20.0",
+      });
+      resolve();
+    };
+
+    if (existingScript) {
+      existingScript.addEventListener("load", () => window.FB && resolve(), { once: true });
+      existingScript.addEventListener("error", reject, { once: true });
+      return;
+    }
+
+    const script = document.createElement("script");
+    script.src = "https://connect.facebook.net/en_US/sdk.js";
+    script.async = true;
+    script.defer = true;
+    script.dataset.facebookSdk = "true";
+    script.onerror = reject;
+    document.body.appendChild(script);
+  });
 }

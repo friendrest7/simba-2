@@ -3,13 +3,12 @@ import { toast } from "sonner";
 import type { Product } from "./products";
 import {
   PICKUP_BRANCHES,
-  createPickupOrder,
-  getBranchStock,
   type BranchName,
   type OrderRecord,
   type PaymentMethod,
   type SessionUser,
 } from "@/lib/demo-store";
+import { createPickupOrder, getBranchStockMap, getBranchStockMaps } from "@/lib/data";
 
 export type CartItem = { product: Product; qty: number };
 
@@ -30,7 +29,12 @@ const Ctx = createContext<{
   qtyOf: (id: number) => number;
   stockOf: (id: number) => number;
   setSelectedBranch: (branch: BranchName) => void;
-  overLimitItems: Array<{ product: Product; qty: number; stock: number }>;
+  overLimitItems: Array<{
+    product: Product;
+    qty: number;
+    stock: number;
+    suggestedBranches: Array<{ branch: BranchName; stock: number }>;
+  }>;
   checkout: (data: {
     user: SessionUser;
     branch: BranchName;
@@ -72,6 +76,10 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [selectedBranch, setSelectedBranchState] = useState<BranchName>("Remera");
   const [lastOrder, setLastOrder] = useState<OrderRecord | null>(null);
+  const [stockMap, setStockMap] = useState<Record<number, number>>({});
+  const [branchStockMaps, setBranchStockMaps] = useState<Record<BranchName, Record<number, number>>>(
+    {} as Record<BranchName, Record<number, number>>,
+  );
 
   useEffect(() => {
     setItems(readStoredCart());
@@ -89,7 +97,30 @@ export function CartProvider({ children }: { children: ReactNode }) {
     localStorage.setItem(BRANCH_STORAGE_KEY, selectedBranch);
   }, [selectedBranch, hydrated]);
 
-  const stockOf = (id: number) => getBranchStock(selectedBranch, id);
+  useEffect(() => {
+    if (!hydrated) return;
+
+    void (async () => {
+      const nextStockMap = await getBranchStockMap(selectedBranch);
+      setStockMap(nextStockMap);
+    })();
+  }, [selectedBranch, hydrated, lastOrder]);
+
+  useEffect(() => {
+    if (!hydrated) return;
+    const hasStockConflict = items.some((item) => item.qty > (stockMap[item.product.id] ?? 0));
+
+    if (!hasStockConflict) {
+      setBranchStockMaps({} as Record<BranchName, Record<number, number>>);
+      return;
+    }
+
+    void (async () => {
+      setBranchStockMaps(await getBranchStockMaps(PICKUP_BRANCHES.filter((branch) => branch !== selectedBranch)));
+    })();
+  }, [items, stockMap, selectedBranch, hydrated, lastOrder]);
+
+  const stockOf = (id: number) => stockMap[id] ?? 0;
 
   const setSelectedBranch = (branch: BranchName) => {
     setSelectedBranchState(branch);
@@ -158,7 +189,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     customerPhone: string;
     notes?: string;
   }) => {
-    const result = createPickupOrder({
+    const result = await createPickupOrder({
       ...data,
       items: items.map((item) => ({ productId: item.product.id, quantity: item.qty })),
     });
@@ -170,6 +201,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
     setLastOrder(result.order);
     setItems([]);
     localStorage.removeItem(STORAGE_KEY);
+    setStockMap(await getBranchStockMap(data.branch));
     return result;
   };
 
@@ -181,6 +213,14 @@ export function CartProvider({ children }: { children: ReactNode }) {
         product: item.product,
         qty: item.qty,
         stock: stockOf(item.product.id),
+        suggestedBranches: PICKUP_BRANCHES.filter((branch) => branch !== selectedBranch)
+          .map((branch) => ({
+            branch,
+            stock: branchStockMaps[branch]?.[item.product.id] ?? 0,
+          }))
+          .filter((candidate) => candidate.stock >= item.qty)
+          .sort((a, b) => b.stock - a.stock)
+          .slice(0, 3),
       }))
       .filter((item) => item.qty > item.stock);
 
@@ -201,7 +241,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
       checkout,
       overLimitItems,
     };
-  }, [items, hydrated, selectedBranch, lastOrder]);
+  }, [items, hydrated, selectedBranch, lastOrder, branchStockMaps]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

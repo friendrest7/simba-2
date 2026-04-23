@@ -1,13 +1,15 @@
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { Star } from "lucide-react";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import {
+  type BranchName,
+} from "@/lib/demo-store";
+import {
   addBranchReview,
   getBranchReviewSummary,
   getBranchReviews,
-  type BranchName,
-} from "@/lib/demo-store";
+} from "@/lib/data";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -19,15 +21,36 @@ export function BranchReviews({ branch }: { branch: BranchName }) {
   const [title, setTitle] = useState("");
   const [comment, setComment] = useState("");
   const [rating, setRating] = useState(5);
-  const [refreshKey, setRefreshKey] = useState(0);
+  const [reviews, setReviews] = useState<Awaited<ReturnType<typeof getBranchReviews>>>([]);
+  const [summary, setSummary] = useState({ count: 0, average: 0 });
+  const [loading, setLoading] = useState(true);
 
-  const reviews = useMemo(() => getBranchReviews(branch), [branch, refreshKey]);
-  const summary = useMemo(() => getBranchReviewSummary(branch), [branch, refreshKey]);
+  useEffect(() => {
+    let active = true;
+    setLoading(true);
 
-  const submitReview = () => {
-    const result = addBranchReview({
+    void (async () => {
+      const [nextReviews, nextSummary] = await Promise.all([
+        getBranchReviews(branch),
+        getBranchReviewSummary(branch),
+      ]);
+
+      if (!active) return;
+      setReviews(nextReviews);
+      setSummary(nextSummary);
+      setLoading(false);
+    })();
+
+    return () => {
+      active = false;
+    };
+  }, [branch]);
+
+  const submitReview = async () => {
+    const result = await addBranchReview({
       branch,
       authorName: user?.name || "Guest",
+      authorUserId: user?.id,
       rating,
       title,
       comment,
@@ -41,7 +64,12 @@ export function BranchReviews({ branch }: { branch: BranchName }) {
     setTitle("");
     setComment("");
     setRating(5);
-    setRefreshKey((value) => value + 1);
+    const [nextReviews, nextSummary] = await Promise.all([
+      getBranchReviews(branch),
+      getBranchReviewSummary(branch),
+    ]);
+    setReviews(nextReviews);
+    setSummary(nextSummary);
     toast.success(t("reviews.submit"));
   };
 
@@ -63,7 +91,11 @@ export function BranchReviews({ branch }: { branch: BranchName }) {
 
       <div className="mt-5 grid gap-6 lg:grid-cols-[1fr_0.92fr]">
         <div className="space-y-3">
-          {reviews.length === 0 ? (
+          {loading ? (
+            <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
+              Loading...
+            </div>
+          ) : reviews.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
               {t("reviews.empty")}
             </div>

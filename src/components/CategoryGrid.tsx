@@ -38,7 +38,7 @@ export function CategoryGrid() {
 
             <div
               className="flex h-12 w-12 items-center justify-center rounded-2xl text-2xl shadow-sm"
-              style={{ background: `color-mix(in oklab, ${c.color} 16%, white)` }}
+              style={{ background: `color-mix(in oklab, ${c.color} 16%, var(--background))` }}
             >
               {c.emoji}
             </div>
