@@ -113,13 +113,6 @@ export function ProductsPage() {
     updateSearch({ q: prompt || undefined });
   };
 
-  const buildShopRangeHref = (option: PriceRangeOption) => {
-    const params = new URLSearchParams();
-    if (option.min !== undefined) params.set("min", String(option.min));
-    if (option.max !== undefined) params.set("max", String(option.max));
-    return `/shop?${params.toString()}`;
-  };
-
   const isActiveRange = (option: PriceRangeOption) => minPrice === option.min && maxPrice === option.max;
 
   return (
@@ -191,7 +184,7 @@ export function ProductsPage() {
             <p className="mt-1 text-sm text-muted-foreground">
               {minPrice !== undefined || maxPrice !== undefined
                 ? `Showing products ${minPrice !== undefined ? `from ${formatRWF(minPrice)}` : ""}${minPrice !== undefined && maxPrice !== undefined ? " to " : ""}${maxPrice !== undefined ? formatRWF(maxPrice) : "and above"}`
-                : "Open a focused price band in a new tab."}
+                : "Open a focused price band."}
             </p>
           </div>
         </div>
@@ -201,11 +194,10 @@ export function ProductsPage() {
               const Icon = option.icon;
               const active = isActiveRange(option);
               return (
-                <a
+                <Link
                   key={option.id}
-                  href={buildShopRangeHref(option)}
-                  target="_blank"
-                  rel="noreferrer"
+                  to="/shop"
+                  search={{ min: option.min, max: option.max }}
                   className={`group flex min-w-[188px] items-center gap-3 rounded-[1.5rem] border px-4 py-3 shadow-sm transition ${active ? "border-primary bg-primary text-primary-foreground shadow-lg shadow-primary/20" : "border-border bg-card text-foreground hover:border-primary/35 hover:bg-primary/5"}`}
                 >
                   <span className={`flex h-11 w-11 items-center justify-center rounded-2xl ${active ? "bg-white/16" : "bg-primary/10 text-primary"}`}>
@@ -217,7 +209,7 @@ export function ProductsPage() {
                       Open filtered shop
                     </span>
                   </span>
-                </a>
+                </Link>
               );
             })}
           </div>

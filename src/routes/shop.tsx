@@ -173,7 +173,7 @@ function ShopPage() {
               <p className="mt-1 text-xs text-muted-foreground md:text-sm">
                 {minPrice !== undefined || maxPrice !== undefined
                   ? `Showing products ${minPrice !== undefined ? `from ${formatRWF(minPrice)}` : ""}${minPrice !== undefined && maxPrice !== undefined ? " to " : ""}${maxPrice !== undefined ? formatRWF(maxPrice) : "and above"}`
-                  : "Open a focused price band in a new tab."}
+                  : "Open a focused price band."}
               </p>
             </div>
           </div>
