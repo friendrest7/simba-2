@@ -703,6 +703,15 @@ function createInitialState(): DemoState {
       branches: [...PICKUP_BRANCHES],
     },
     {
+      id: "admin-test-default",
+      name: "Simba Admin",
+      email: "admin@test.com",
+      phone: "0788000011",
+      password: "admin123",
+      role: "manager",
+      branches: [...PICKUP_BRANCHES],
+    },
+    {
       id: "admin-remera",
       name: "Bella Remera Admin",
       email: "admin.remera@simba.demo",
@@ -737,6 +746,15 @@ function createInitialState(): DemoState {
       password: "simba123",
       role: "staff",
       branches: ["Kimironko"],
+    },
+    {
+      id: "buyer-test-default",
+      name: "Simba Buyer",
+      email: "buyer@test.com",
+      phone: "0788000012",
+      password: "password123",
+      role: "customer",
+      branches: [],
     },
     {
       id: "customer-demo",
@@ -875,7 +893,7 @@ function normalizeState(state: Partial<DemoState>): DemoState {
   const storefront = normalizeStorefront(state.storefront, catalog, inventory);
 
   return {
-    users: state.users ?? initial.users,
+    users: mergeUsers(state.users, initial.users),
     catalog,
     branches: normalizeBranches(state.branches),
     inventory,
@@ -883,6 +901,16 @@ function normalizeState(state: Partial<DemoState>): DemoState {
     orders: state.orders ?? initial.orders,
     reviews: state.reviews ?? initial.reviews,
   };
+}
+
+function mergeUsers(users: StoredUser[] | undefined, initialUsers: StoredUser[]) {
+  const existing = new Map((users ?? []).map((user) => [user.email.toLowerCase(), user]));
+  for (const seed of initialUsers) {
+    if (!existing.has(seed.email.toLowerCase())) {
+      existing.set(seed.email.toLowerCase(), seed);
+    }
+  }
+  return Array.from(existing.values());
 }
 
 export function ensureDemoState() {

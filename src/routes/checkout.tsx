@@ -12,6 +12,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
+import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
@@ -26,6 +27,7 @@ type PaymentStage = "idle" | "processing" | "success";
 
 function CheckoutPage() {
   const { items, subtotal, deliveryFee, total, count, checkout, selectedBranch } = useCart();
+  const { user } = useAuth();
   const { t } = useI18n();
   const navigate = useNavigate();
   const [submitting, setSubmitting] = useState(false);
@@ -92,6 +94,8 @@ function CheckoutPage() {
     }
 
     const result = await checkout({
+      customerId: user?.id,
+      customerEmail: user?.email,
       customerName: formData.customerName.trim(),
       phoneNumber: normalizedPhoneNumber,
       deliveryLocation: formData.deliveryLocation.trim(),

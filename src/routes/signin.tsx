@@ -439,6 +439,8 @@ function SignInPage() {
           <div className="mt-8 rounded-[1.5rem] border border-white/10 bg-white/8 p-5">
             <div className="text-sm font-bold text-brand-yellow">{t("auth.demoAccounts")}</div>
             <div className="mt-3 space-y-2 text-sm text-white/80">
+              <p>{t("auth.buyerDemo")}</p>
+              <p>{t("auth.adminDemo")}</p>
               <p>{t("auth.managerDemo")}</p>
               <p>{t("auth.staffDemo")}</p>
               <p className="text-white/65">{t("auth.passwordHint")}</p>
@@ -545,7 +547,7 @@ function SignInPage() {
                         onChange={(e) =>
                           setSignInData((current) => ({ ...current, credential: e.target.value }))
                         }
-                        placeholder="manager@simba.demo"
+                        placeholder="buyer@test.com"
                         className="mt-1.5 h-11 rounded-xl"
                       />
                     </div>

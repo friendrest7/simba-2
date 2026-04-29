@@ -1,10 +1,17 @@
+import type { ReactNode } from "react";
 import { createFileRoute, Link, Navigate } from "@tanstack/react-router";
-import { useEffect, useState } from "react";
-import { PackageCheck, ShoppingBag, UserRound } from "lucide-react";
+import { useEffect, useMemo, useState } from "react";
+import { CheckCircle2, PackageCheck, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
-import { getOrdersForUser } from "@/lib/data";
+import {
+  formatOrderStatus,
+  formatPaymentStatus,
+  getOrdersForCustomer,
+  subscribeStore,
+  type CustomerOrder,
+} from "@/lib/order-store";
 import { formatRWF } from "@/lib/products";
 import cartIcon from "@/assets/cart-icon.png";
 
@@ -16,27 +23,31 @@ export const Route = createFileRoute("/client-dashboard")({
 function ClientDashboardPage() {
   const { user, hydrated } = useAuth();
   const { t } = useI18n();
-  const [orders, setOrders] = useState<Awaited<ReturnType<typeof getOrdersForUser>>>([]);
+  const [orders, setOrders] = useState<CustomerOrder[]>([]);
+  const activeOrders = useMemo(
+    () => orders.filter((order) => !["delivered", "rejected"].includes(order.status)).length,
+    [orders],
+  );
 
   useEffect(() => {
     if (!user) return;
 
-    let active = true;
-    void (async () => {
-      const nextOrders = await getOrdersForUser(user);
-      if (active) setOrders(nextOrders);
-    })();
+    const sync = () =>
+      setOrders(
+        getOrdersForCustomer({
+          id: user.id,
+          email: user.email,
+          phone: user.phone,
+        }),
+      );
 
-    return () => {
-      active = false;
-    };
+    sync();
+    return subscribeStore(sync);
   }, [user]);
 
   if (!hydrated) return null;
   if (!user) return <Navigate to="/signin" search={{ redirect: "/client-dashboard" } as never} />;
   if (user.role === "manager" || user.role === "staff") return <Navigate to="/admin-dashboard" />;
-
-  const activeOrders = orders.filter((order) => order.status !== "collected").length;
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -56,17 +67,22 @@ function ClientDashboardPage() {
               <p className="mt-2 text-sm text-muted-foreground">{user.email}</p>
             </div>
           </div>
-          <Button
-            asChild
-            size="lg"
-            className="rounded-full gradient-brand text-brand-foreground shadow-lg shadow-primary/20 hover:opacity-90"
-          >
-            <Link to="/products">{t("cart.continue")}</Link>
-          </Button>
+          <div className="flex flex-col gap-3 sm:flex-row">
+            <Button
+              asChild
+              size="lg"
+              className="rounded-full gradient-brand text-brand-foreground shadow-lg shadow-primary/20 hover:opacity-90"
+            >
+              <Link to="/products">{t("cart.continue")}</Link>
+            </Button>
+            <Button asChild variant="outline" size="lg" className="rounded-full">
+              <Link to="/cart">{t("ui.viewCart")}</Link>
+            </Button>
+          </div>
         </div>
       </section>
 
-      <div className="mt-6 grid gap-4 md:grid-cols-3">
+      <div className="mt-6 grid gap-4 md:grid-cols-4">
         <Stat
           icon={<ShoppingBag className="h-5 w-5" />}
           label={t("client.totalOrders")}
@@ -78,9 +94,14 @@ function ClientDashboardPage() {
           value={String(activeOrders)}
         />
         <Stat
+          icon={<CheckCircle2 className="h-5 w-5" />}
+          label={t("order.status.delivered")}
+          value={String(orders.filter((order) => order.status === "delivered").length)}
+        />
+        <Stat
           icon={<UserRound className="h-5 w-5" />}
-          label={t("auth.signInTab")}
-          value={t("client.customer")}
+          label={t("client.customer")}
+          value={t("auth.signInTab")}
         />
       </div>
 
@@ -105,25 +126,7 @@ function ClientDashboardPage() {
               <div className="text-sm text-muted-foreground">{t("client.noOrders")}</div>
             </div>
           ) : (
-            orders.slice(0, 8).map((order) => (
-              <div
-                key={order.id}
-                className="rounded-2xl border border-border bg-background/55 p-4 transition hover:border-primary/35 hover:shadow-md"
-              >
-                <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-                  <div>
-                    <div className="font-bold">#{order.id}</div>
-                    <div className="mt-1 text-sm text-muted-foreground">
-                      {order.branch} · {order.pickupDate} · {order.pickupSlot}
-                    </div>
-                  </div>
-                  <div className="text-sm font-bold text-primary">{formatRWF(order.total)}</div>
-                  <div className="w-fit rounded-full bg-secondary px-3 py-1 text-xs font-bold text-secondary-foreground">
-                    {t(`dashboard.status.${order.status}`)}
-                  </div>
-                </div>
-              </div>
-            ))
+            orders.map((order) => <OrderCard key={order.id} order={order} />)
           )}
         </div>
       </section>
@@ -131,7 +134,54 @@ function ClientDashboardPage() {
   );
 }
 
-function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; value: string }) {
+function OrderCard({ order }: { order: CustomerOrder }) {
+  const { t } = useI18n();
+
+  return (
+    <div className="rounded-2xl border border-border bg-background/55 p-4 transition hover:border-primary/35 hover:shadow-md">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-start lg:justify-between">
+        <div>
+          <div className="font-bold">#{order.id}</div>
+          <div className="mt-1 text-sm text-muted-foreground">{order.deliveryLocation}</div>
+        </div>
+        <div className="flex flex-wrap gap-2">
+          <span className="w-fit rounded-full bg-secondary px-3 py-1 text-xs font-bold text-secondary-foreground">
+            {formatOrderStatus(order.status, t)}
+          </span>
+          <span className="w-fit rounded-full bg-primary/10 px-3 py-1 text-xs font-bold text-primary">
+            {formatPaymentStatus(order.paymentStatus, t)}
+          </span>
+        </div>
+      </div>
+
+      <div className="mt-4 grid gap-4 md:grid-cols-3">
+        <Info label={t("dashboard.totalColumn")} value={formatRWF(order.total)} />
+        <Info
+          label={t("dashboard.paymentColumn")}
+          value={t(`checkout.payment.${order.paymentMethod}`)}
+        />
+        <Info
+          label={t("order.deliveryStatusLabel")}
+          value={formatOrderStatus(order.deliveryStatus, t)}
+          icon={<Truck className="h-4 w-4" />}
+        />
+      </div>
+
+      <div className="mt-4 space-y-2 rounded-2xl border border-border bg-card p-4">
+        {order.items.map((item) => (
+          <div key={item.productId} className="flex items-center justify-between gap-3 text-sm">
+            <span>
+              {item.name} x{item.quantity}
+            </span>
+            <span className="font-semibold">{formatRWF(item.price * item.quantity)}</span>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function Stat({ icon, label, value }: { icon: ReactNode; label: string; value: string }) {
   return (
     <div className="rounded-[1.75rem] border border-border bg-card p-5 shadow-sm transition hover:-translate-y-0.5 hover:border-primary/30 hover:shadow-lg">
       <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
@@ -141,6 +191,18 @@ function Stat({ icon, label, value }: { icon: React.ReactNode; label: string; va
         {label}
       </div>
       <div className="mt-2 text-2xl font-black">{value}</div>
+    </div>
+  );
+}
+
+function Info({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
+  return (
+    <div className="rounded-xl border border-border bg-card p-4">
+      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
+        {icon}
+        <span>{label}</span>
+      </div>
+      <div className="mt-2 font-semibold text-foreground">{value}</div>
     </div>
   );
 }

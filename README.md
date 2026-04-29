@@ -63,6 +63,17 @@ Simba is a multilingual supermarket demo built with TanStack Router, React, and 
   - Swahili
   - Turkish
 
+## Default test credentials
+
+These work in the built-in local/mock auth fallback without any extra setup.
+
+- Buyer / Customer
+  - Email: `buyer@test.com`
+  - Password: `password123`
+- Market Rep / Admin
+  - Email: `admin@test.com`
+  - Password: `admin123`
+
 ## Persistence / backend behavior
 
 The grading-safe default backend is local.
@@ -70,6 +81,8 @@ The grading-safe default backend is local.
 - Cart data is stored in `localStorage`
 - Orders are stored in `localStorage`
 - Order status updates are stored in `localStorage`
+- Users and sessions are available through built-in local/mock auth fallback
+- MoMo simulation and payment status are stored in `localStorage`
 - Stock changes after checkout are stored in `localStorage`
 - The latest order confirmation can still be opened after refresh
 

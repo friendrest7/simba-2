@@ -19,6 +19,8 @@ export type PaymentMethod = "mobile-money" | "cash-on-delivery";
 export type PaymentStatus = "pending" | "processing" | "paid" | "cash-on-delivery" | "rejected";
 
 export type CheckoutOrderInput = {
+  customerId?: string;
+  customerEmail?: string;
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
@@ -30,6 +32,8 @@ export type CheckoutOrderInput = {
 
 export type CustomerOrder = {
   id: string;
+  customerId?: string;
+  customerEmail?: string;
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
@@ -145,6 +149,8 @@ const normalizeOrder = (order: Partial<CustomerOrder> & { id: string }): Custome
 
   return {
     id: order.id,
+    customerId: order.customerId,
+    customerEmail: order.customerEmail,
     customerName: order.customerName ?? "",
     phoneNumber: order.phoneNumber ?? "",
     deliveryLocation: order.deliveryLocation ?? "",
@@ -217,6 +223,24 @@ export const getOrders = () => readOrders();
 export const getOrderById = (orderId: string) =>
   getOrders().find((order) => order.id === orderId) ?? null;
 
+export const getOrdersForCustomer = (customer: {
+  id?: string | null;
+  email?: string | null;
+  phone?: string | null;
+}) => {
+  const normalizedEmail = customer.email?.trim().toLowerCase();
+  const normalizedPhone = customer.phone?.replace(/\D/g, "");
+
+  return getOrders().filter((order) => {
+    const orderPhone = order.phoneNumber.replace(/\D/g, "");
+    return (
+      (customer.id && order.customerId === customer.id) ||
+      (normalizedEmail && order.customerEmail?.trim().toLowerCase() === normalizedEmail) ||
+      (normalizedPhone && orderPhone === normalizedPhone)
+    );
+  });
+};
+
 export const getLastOrder = () => {
   const orderId = safeRead<string | null>(LAST_ORDER_KEY, null);
   return orderId ? getOrderById(orderId) : null;
@@ -279,6 +303,8 @@ export const placeOrder = (input: CheckoutOrderInput, items: CartLineInput[]) =>
 
   const order: CustomerOrder = {
     id: `SIM-${Date.now().toString(36).toUpperCase()}`,
+    customerId: input.customerId?.trim() || undefined,
+    customerEmail: input.customerEmail?.trim().toLowerCase() || undefined,
     customerName: input.customerName.trim(),
     phoneNumber: input.phoneNumber.trim(),
     deliveryLocation: input.deliveryLocation.trim(),
