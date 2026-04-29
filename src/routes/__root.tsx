@@ -1,6 +1,6 @@
 import { Outlet, createRootRoute, Link } from "@tanstack/react-router";
 import { ThemeProvider } from "@/lib/theme";
-import { I18nProvider, translate, type Lang } from "@/lib/i18n";
+import { I18nProvider, getStoredLang, translate } from "@/lib/i18n";
 import { CurrencyProvider } from "@/lib/currency";
 import { CartProvider } from "@/lib/cart";
 import { AuthProvider } from "@/lib/auth";
@@ -30,58 +30,44 @@ function NotFoundComponent() {
   );
 }
 
-function getStoredLang(): Lang {
-  if (typeof window === "undefined") {
-    return "en";
-  }
-
-  const savedLang = localStorage.getItem("simba.lang");
-  return savedLang === "fr" ||
-    savedLang === "rw" ||
-    savedLang === "sw" ||
-    savedLang === "tr" ||
-    savedLang === "en"
-    ? savedLang
-    : "en";
-}
-
 export const Route = createRootRoute({
-  head: () => ({
-    meta: [
-      { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: "Simba Supermarket - Pickup-first grocery demo" },
-      {
-        name: "description",
-        content:
-          "Reserve groceries online and pick them up from Simba branches with branch-aware stock and staff workflows.",
-      },
-      { property: "og:title", content: "Simba Supermarket - Pickup-first grocery demo" },
-      {
-        property: "og:description",
-        content:
-          "Branch-aware pickup ordering, inventory, reviews, and staff dashboard for Simba 2.0.",
-      },
-      { property: "og:type", content: "website" },
-      { name: "twitter:card", content: "summary_large_image" },
-      { name: "twitter:title", content: "Simba Supermarket - Pickup-first grocery demo" },
-      {
-        name: "twitter:description",
-        content:
-          "Branch-aware pickup ordering, inventory, reviews, and staff dashboard for Simba 2.0.",
-      },
-      {
-        property: "og:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
-      },
-      {
-        name: "twitter:image",
-        content:
-          "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
-      },
-    ],
-  }),
+  head: () => {
+    const lang = getStoredLang();
+
+    return {
+      meta: [
+        { charSet: "utf-8" },
+        { name: "viewport", content: "width=device-width, initial-scale=1" },
+        { title: translate(lang, "meta.siteTitle") },
+        {
+          name: "description",
+          content: translate(lang, "meta.siteDescription"),
+        },
+        { property: "og:title", content: translate(lang, "meta.siteTitle") },
+        {
+          property: "og:description",
+          content: translate(lang, "meta.siteDescription"),
+        },
+        { property: "og:type", content: "website" },
+        { name: "twitter:card", content: "summary_large_image" },
+        { name: "twitter:title", content: translate(lang, "meta.siteTitle") },
+        {
+          name: "twitter:description",
+          content: translate(lang, "meta.siteDescription"),
+        },
+        {
+          property: "og:image",
+          content:
+            "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
+        },
+        {
+          name: "twitter:image",
+          content:
+            "https://pub-bb2e103a32db4e198524a2e9ed8f35b4.r2.dev/b5644517-2072-4efb-b28f-1e5b6de355e5/id-preview-9ba03a05--8df771c7-753a-47a6-8b36-e6c8083a242d.lovable.app-1776759013624.png",
+        },
+      ],
+    };
+  },
   component: RootComponent,
   notFoundComponent: NotFoundComponent,
 });

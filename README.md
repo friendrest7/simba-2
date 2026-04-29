@@ -1,121 +1,79 @@
-# Simba Supermarket Demo
+# Simba Supermarket
 
-Simba is a multilingual supermarket demo built with TanStack Router, React, and local-first persistence. It now includes a complete buyer flow, a working market rep dashboard, and a safe fallback backend using `localStorage` when Supabase is not configured.
+Simba Supermarket is a multilingual, mobile-first online supermarket demo for Kigali. It is grading-safe by default: buyer auth, admin auth, cart, checkout, MoMo simulation, orders, and dashboard updates all work without any external backend.
 
-## What works now
+## Demo Credentials
 
-- Landing page with a stronger hero, branch selection, and direct path into shopping
-- Product browsing with:
-  - search
-  - category filtering
-  - price filtering
-  - in-stock filtering
-  - sorting
-- Product detail page with:
-  - image
-  - name
-  - price
-  - category
-  - description
-  - stock status
-  - related products
-  - add to cart controls
-- Cart with:
-  - add item
-  - remove item
-  - increase quantity
-  - decrease quantity
-  - clear cart
-  - subtotal
-  - delivery fee
-  - total
-- Checkout with:
-  - customer name
-  - phone number
-  - address/location
-  - delivery notes
-  - payment method
-  - MoMo payment simulation
-  - order summary
-- Order confirmation with:
-  - order ID
-  - items
-  - totals
-  - customer info
-  - payment status
-  - delivery status
-- Market rep dashboard with:
-  - persistent incoming orders
-  - customer and order search
-  - status filter
-  - payment status visibility
-  - accept order
-  - reject order
-  - mark preparing
-  - mark ready
-  - mark out for delivery
-  - mark delivered
-  - statistics cards for total, pending, accepted, delivered, and revenue
-- Multi-language UI for:
-  - English
-  - Kinyarwanda
-  - French
-  - Swahili
-  - Turkish
+Use these accounts immediately. No signup, email verification, or external auth setup is required.
 
-## Default test credentials
-
-These work in the built-in local/mock auth fallback without any extra setup.
-
-- Buyer / Customer
+- Buyer
   - Email: `buyer@test.com`
   - Password: `password123`
-- Market Rep / Admin
+- Admin / Market Rep
   - Email: `admin@test.com`
   - Password: `admin123`
 
-## Persistence / backend behavior
+## Features Completed
 
-The grading-safe default backend is local.
+- Buyer flow: landing page, shop, product detail, cart, checkout, MoMo simulation, order confirmation, order history
+- Product browsing: category browsing, search, price filters, in-stock filters, sorting
+- Cart: add, remove, increase, decrease, clear, subtotal, delivery fee, total
+- Checkout: customer name, phone, delivery address, notes, payment method, MoMo simulation
+- Order confirmation: order ID, items, totals, payment status, delivery status
+- Market Rep Dashboard: order list, customer details, payment status, delivery status, status update buttons, revenue and order stats
+- Multi-language: English, Kinyarwanda, French, plus existing Swahili and Turkish support
+- Dark mode, responsive layout, translated empty states, loading states, and status feedback
 
-- Cart data is stored in `localStorage`
-- Orders are stored in `localStorage`
-- Order status updates are stored in `localStorage`
-- Users and sessions are available through built-in local/mock auth fallback
-- MoMo simulation and payment status are stored in `localStorage`
-- Stock changes after checkout are stored in `localStorage`
-- The latest order confirmation can still be opened after refresh
+## Backend Fallback
 
-The order persistence layer is implemented in `src/lib/order-store.ts`.
+The app automatically falls back to local demo persistence when Supabase or any real backend is unavailable.
 
-## Run the project
+- Users and sessions persist with local/mock auth
+- Cart persists in `localStorage`
+- Orders persist in `localStorage`
+- Payment status persists in `localStorage`
+- Dashboard order status updates persist in `localStorage`
+- Seeded demo orders are available so the dashboard is never empty for grading
+
+Core persistence logic lives in `src/lib/order-store.ts` and the auth fallback lives in `src/lib/demo-store.ts`.
+
+## Run Locally
 
 ```sh
 npm install
 npm run dev
 ```
 
-## Validation commands
+## Validation
 
 ```sh
 npm run lint
 npm run build
 ```
 
-## Optional Supabase setup
+## Live Demo Notes
 
-The app can still use Supabase for auth and related setup if you provide environment variables, but the buyer flow and dashboard do not depend on Supabase for demo grading.
+- Deploy to Vercel, Netlify, or Cloudflare Pages as a static Vite app
+- No backend is required for grading because the local fallback is automatic
+- After deploy, the grader can log in immediately with the demo credentials above
+
+## GitHub Submission Notes
+
+- Submit your GitHub repository URL
+- Submit your deployed app URL
+- Keep the demo credentials visible in the login page and in this README
+- The grader should be able to test buyer flow, admin dashboard flow, and language switching without any setup
+
+## Optional Supabase Setup
+
+Supabase is optional. The demo does not depend on it for grading.
 
 1. Copy `.env.example` to `.env.local`
-2. Fill in your Supabase values
-3. Run the schema from `supabase/schema.sql`
-4. Optionally seed demo data:
+2. Add your Supabase values
+3. Run `supabase/schema.sql`
+4. Optionally seed extra backend data with `npm run backend:seed`
 
-```sh
-npm run backend:seed
-```
-
-## Main files for the buyer + staff flow
+## Main Buyer and Staff Files
 
 - `src/routes/index.tsx`
 - `src/routes/products.tsx`
@@ -123,8 +81,10 @@ npm run backend:seed
 - `src/routes/cart.tsx`
 - `src/routes/checkout.tsx`
 - `src/routes/order-confirmation.tsx`
+- `src/routes/client-dashboard.tsx`
 - `src/routes/dashboard.tsx`
+- `src/routes/signin.tsx`
 - `src/lib/cart.tsx`
 - `src/lib/order-store.ts`
+- `src/lib/demo-store.ts`
 - `src/lib/i18n.tsx`
-- `src/lib/i18n-extra.ts`

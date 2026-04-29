@@ -14,13 +14,13 @@ import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import type { PaymentMethod, PaymentStatus } from "@/lib/order-store";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
-  head: () => ({ meta: [{ title: "Checkout - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.checkoutTitle") }] }),
 });
 
 type PaymentStage = "idle" | "processing" | "success" | "failure";
@@ -321,7 +321,11 @@ function CheckoutPage() {
             className="mt-6 w-full rounded-full"
             disabled={submitting}
           >
-            {submitting ? t("ui.processing") : t("checkout.placeOrder")}
+            {submitting
+              ? t("ui.processing")
+              : paymentMethod === "mobile-money"
+                ? t("checkout.payWithMomo")
+                : t("checkout.placeOrder")}
           </Button>
           <Button asChild variant="ghost" className="mt-2 w-full rounded-full">
             <Link to="/cart">{t("ui.backToCart")}</Link>

@@ -40,12 +40,20 @@ function normalizeLang(value: string | null | undefined): Lang {
   return value === "fr" || value === "rw" || value === "sw" || value === "tr" ? value : "en";
 }
 
+export function getStoredLang(): Lang {
+  if (typeof window === "undefined") {
+    return "en";
+  }
+
+  return normalizeLang(window.localStorage.getItem("simba.lang"));
+}
+
 export function I18nProvider({ children }: { children: ReactNode }) {
   const [lang, setLangState] = useState<Lang>("en");
 
   useEffect(() => {
     if (typeof window === "undefined") return;
-    setLangState(normalizeLang(window.localStorage.getItem("simba.lang")));
+    setLangState(getStoredLang());
   }, []);
 
   useEffect(() => {

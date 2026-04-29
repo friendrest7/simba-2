@@ -1,4 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
+import { getStoredLang, translate } from "@/lib/i18n";
 import { useState } from "react";
 import { Minus, Package2, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -8,7 +9,7 @@ import { formatRWF } from "@/lib/products";
 
 export const Route = createFileRoute("/cart")({
   component: CartPage,
-  head: () => ({ meta: [{ title: "Your cart - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.cartTitle") }] }),
 });
 
 function CartPage() {

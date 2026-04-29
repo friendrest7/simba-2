@@ -43,7 +43,7 @@ export function BranchReviews({ branch }: { branch: BranchName }) {
   const submitReview = async () => {
     const result = await addBranchReview({
       branch,
-      authorName: user?.name || "Guest",
+      authorName: user?.name || t("reviews.guest"),
       authorUserId: user?.id,
       rating,
       title,
@@ -85,7 +85,7 @@ export function BranchReviews({ branch }: { branch: BranchName }) {
         <div className="space-y-3">
           {loading ? (
             <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">
-              Loading...
+              {t("ui.loading")}
             </div>
           ) : reviews.length === 0 ? (
             <div className="rounded-2xl border border-dashed border-border p-5 text-sm text-muted-foreground">

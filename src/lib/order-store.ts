@@ -95,6 +95,96 @@ const buildInitialStockMap = () =>
     }),
   ) as Record<number, number>;
 
+const daysAgoIso = (days: number, hour: number, minute: number) => {
+  const date = new Date();
+  date.setDate(date.getDate() - days);
+  date.setHours(hour, minute, 0, 0);
+  return date.toISOString();
+};
+
+const createSeedOrders = (): CustomerOrder[] => {
+  const [first, second, third, fourth, fifth, sixth] = PRODUCTS;
+  const makeItems = (lines: Array<{ product: Product; quantity: number }>) =>
+    lines.map(({ product, quantity }) => ({
+      productId: product.id,
+      name: product.name,
+      price: product.price,
+      quantity,
+      image: product.image,
+    }));
+  const withTotals = (
+    base: Omit<CustomerOrder, "subtotal" | "deliveryFee" | "total">,
+  ): CustomerOrder => {
+    const subtotal = base.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
+    const deliveryFee = getDeliveryFee(subtotal);
+    return {
+      ...base,
+      subtotal,
+      deliveryFee,
+      total: subtotal + deliveryFee,
+    };
+  };
+
+  return [
+    withTotals({
+      id: "SIM-DEMO-1001",
+      customerId: "buyer-test-default",
+      customerEmail: "buyer@test.com",
+      customerName: "Simba Buyer",
+      phoneNumber: "0788123456",
+      deliveryLocation: "Kimironko, KG 11 Ave, House 24",
+      deliveryNotes: "Call before arrival at the blue gate.",
+      paymentMethod: "mobile-money",
+      paymentStatus: "paid",
+      momoNumber: "0788123456",
+      status: "pending",
+      deliveryStatus: "pending",
+      createdAt: daysAgoIso(0, 9, 25),
+      items: makeItems([
+        { product: first, quantity: 2 },
+        { product: second, quantity: 1 },
+        { product: third, quantity: 1 },
+      ]),
+    }),
+    withTotals({
+      id: "SIM-DEMO-1002",
+      customerId: "buyer-test-default",
+      customerEmail: "buyer@test.com",
+      customerName: "Aline Mukamana",
+      phoneNumber: "0788456123",
+      deliveryLocation: "Remera, KG 9 Ave, Apartment 4",
+      deliveryNotes: "Security desk on the right side.",
+      paymentMethod: "cash-on-delivery",
+      paymentStatus: "cash-on-delivery",
+      status: "accepted",
+      deliveryStatus: "accepted",
+      createdAt: daysAgoIso(0, 10, 40),
+      items: makeItems([
+        { product: fourth, quantity: 3 },
+        { product: fifth, quantity: 2 },
+      ]),
+    }),
+    withTotals({
+      id: "SIM-DEMO-1003",
+      customerEmail: "jeanne@test.com",
+      customerName: "Jeanne Uwera",
+      phoneNumber: "0788991001",
+      deliveryLocation: "Kacyiru, near Kigali Heights",
+      deliveryNotes: "Ring apartment 2B.",
+      paymentMethod: "mobile-money",
+      paymentStatus: "paid",
+      momoNumber: "0788991001",
+      status: "delivered",
+      deliveryStatus: "delivered",
+      createdAt: daysAgoIso(1, 15, 5),
+      items: makeItems([
+        { product: sixth ?? first, quantity: 1 },
+        { product: second, quantity: 2 },
+      ]),
+    }),
+  ];
+};
+
 const normalizeOrderStatus = (status: string | undefined): OrderStatus => {
   switch (status) {
     case "accepted":
@@ -189,7 +279,9 @@ const readOrders = (): CustomerOrder[] => {
     }
   }
 
-  return [];
+  const seeded = createSeedOrders();
+  safeWrite(ORDERS_KEY, seeded);
+  return seeded;
 };
 
 const writeOrders = (orders: CustomerOrder[]) => {

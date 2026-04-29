@@ -2,16 +2,19 @@ import { createFileRoute } from "@tanstack/react-router";
 import { CheckCircle2, MapPin, ShieldCheck, ShoppingBasket } from "lucide-react";
 import { PICKUP_BRANCHES } from "@/lib/demo-store";
 import { getBranchMapUrl } from "@/lib/branchLocations";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import type { ReactNode } from "react";
 
 export const Route = createFileRoute("/about")({
   component: AboutPage,
-  head: () => ({ meta: [{ title: "About Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.aboutTitle") }] }),
 });
 
 function AboutPage() {
+  const { t } = useI18n();
+
   const openBranchMap = (branch: (typeof PICKUP_BRANCHES)[number]) => {
-    if (window.confirm(`Open ${branch} branch in Google Maps?`)) {
+    if (window.confirm(`${t("about.openMapConfirm")} ${branch}?`)) {
       window.open(getBranchMapUrl(branch), "_blank", "noopener,noreferrer");
     }
   };
@@ -22,35 +25,33 @@ function AboutPage() {
         <div className="grid gap-0 lg:grid-cols-[1.05fr_0.95fr]">
           <div className="bg-[linear-gradient(145deg,hsl(var(--primary)),hsl(var(--primary)/0.82))] p-8 text-primary-foreground sm:p-10">
             <p className="text-xs font-black uppercase tracking-[0.24em] text-primary-foreground/75">
-              About Simba Supermarket
+              {t("about.eyebrow")}
             </p>
             <h1 className="mt-4 text-4xl font-black tracking-tight sm:text-5xl">
-              Branch-aware grocery ordering for Kigali shoppers.
+              {t("about.title")}
             </h1>
             <p className="mt-4 text-base font-semibold text-primary-foreground/92">
-              Order your basket online and pick it up from your selected branch.
+              {t("about.subtitle")}
             </p>
             <p className="mt-5 max-w-2xl text-sm leading-7 text-primary-foreground/82">
-              Simba connects customers to real branch stock before checkout. Customers choose a
-              branch, reserve available products, and collect orders with clearer inventory
-              visibility for staff.
+              {t("about.body")}
             </p>
           </div>
           <div className="grid content-center gap-4 bg-background p-8 sm:p-10">
             <InfoCard
               icon={<ShoppingBasket className="h-5 w-5" />}
-              title="Client ordering"
-              body="Customers browse sellable products, search across the catalog, and see unavailable items clearly labelled."
+              title={t("about.card.clientTitle")}
+              body={t("about.card.clientBody")}
             />
             <InfoCard
               icon={<ShieldCheck className="h-5 w-5" />}
-              title="Branch admin control"
-              body="Admins manage only their assigned branch inventory, storefront visibility, orders, and reviews."
+              title={t("about.card.adminTitle")}
+              body={t("about.card.adminBody")}
             />
             <InfoCard
               icon={<CheckCircle2 className="h-5 w-5" />}
-              title="Production-focused flow"
-              body="The app separates inventory from storefront visibility so products cannot be published without stock."
+              title={t("about.card.flowTitle")}
+              body={t("about.card.flowBody")}
             />
           </div>
         </div>
@@ -60,16 +61,11 @@ function AboutPage() {
         <div className="flex flex-col gap-3 sm:flex-row sm:items-end sm:justify-between">
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-primary">
-              Branch maps
+              {t("about.mapsEyebrow")}
             </p>
-            <h2 className="mt-2 text-2xl font-black tracking-tight">
-              Open directions to a Simba branch
-            </h2>
+            <h2 className="mt-2 text-2xl font-black tracking-tight">{t("about.mapsTitle")}</h2>
           </div>
-          <p className="max-w-xl text-sm leading-6 text-muted-foreground">
-            Use these branch links for pickup planning. The navbar location icon opens the map for
-            the currently selected branch.
-          </p>
+          <p className="max-w-xl text-sm leading-6 text-muted-foreground">{t("about.mapsBody")}</p>
         </div>
         <div className="mt-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {PICKUP_BRANCHES.map((branch) => (
@@ -84,7 +80,7 @@ function AboutPage() {
                 {branch}
               </span>
               <span className="mt-2 block text-xs font-semibold uppercase tracking-[0.14em] text-muted-foreground group-hover:text-primary">
-                Open in Google Maps
+                {t("about.openInMaps")}
               </span>
             </button>
           ))}

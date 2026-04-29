@@ -30,6 +30,15 @@ export function Header() {
       : t("client.dashboard");
   const signInRedirect =
     typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/";
+  const ordersRoute = user ? dashboardRoute : "/signin";
+  const ordersSearch = user
+    ? undefined
+    : ({ redirect: "/client-dashboard", intent: "client" } as never);
+  const adminRoute = user?.role === "manager" || user?.role === "staff" ? "/dashboard" : "/signin";
+  const adminSearch =
+    user?.role === "manager" || user?.role === "staff"
+      ? undefined
+      : ({ redirect: "/dashboard", intent: "admin" } as never);
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -70,8 +79,8 @@ export function Header() {
             href={selectedBranchMapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Open ${selectedBranch} branch in Google Maps`}
-            title={`Open ${selectedBranch} branch in Google Maps`}
+            aria-label={`${t("header.openBranchMap")} ${selectedBranch}`}
+            title={`${t("header.openBranchMap")} ${selectedBranch}`}
             className="rounded-full p-1 text-primary-foreground transition hover:bg-white/15 hover:text-primary-foreground"
           >
             <MapPin className="h-4 w-4" />
@@ -205,14 +214,59 @@ export function Header() {
         </Button>
       </div>
 
+      <div className="border-t border-white/15 bg-primary/95 px-4 py-3">
+        <div className="mx-auto flex max-w-7xl flex-col gap-3 lg:flex-row lg:items-center lg:justify-between">
+          <nav
+            aria-label={t("ui.primaryNavigation")}
+            className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
+          >
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to="/products">{t("nav.shop")}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to="/cart">{t("nav.cart")}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to="/checkout">{t("nav.checkout")}</Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to={ordersRoute} search={ordersSearch}>
+                {t("nav.orders")}
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link
+                to={user ? dashboardRoute : "/signin"}
+                search={
+                  user ? undefined : ({ redirect: signInRedirect, intent: "client" } as never)
+                }
+              >
+                {user ? dashboardLabel : t("nav.signin")}
+              </Link>
+            </Button>
+            <Button asChild variant="secondary" size="sm" className="rounded-full">
+              <Link to={adminRoute} search={adminSearch}>
+                {t("nav.marketRepDashboard")}
+              </Link>
+            </Button>
+          </nav>
+
+          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-primary-foreground/85">
+            <span>{t("lang.change")}</span>
+            <span className="hidden h-4 w-px bg-white/20 sm:inline-block" />
+            <span>{t("ui.toggleTheme")}</span>
+          </div>
+        </div>
+      </div>
+
       <div className="border-t border-white/20 bg-primary px-4 py-2 lg:hidden">
         <div className="mx-auto grid max-w-7xl gap-2 sm:grid-cols-2">
           <a
             href={selectedBranchMapUrl}
             target="_blank"
             rel="noopener noreferrer"
-            aria-label={`Open ${selectedBranch} branch in Google Maps`}
-            title={`Open ${selectedBranch} branch in Google Maps`}
+            aria-label={`${t("header.openBranchMap")} ${selectedBranch}`}
+            title={`${t("header.openBranchMap")} ${selectedBranch}`}
             className="rounded-full p-1 text-primary-foreground transition hover:bg-white/15 hover:text-primary-foreground"
           >
             <MapPin className="h-4 w-4" />

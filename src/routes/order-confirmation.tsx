@@ -3,7 +3,7 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, PackageCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import {
   formatOrderStatus,
@@ -19,7 +19,7 @@ export const Route = createFileRoute("/order-confirmation")({
   validateSearch: (search: Record<string, unknown>) => ({
     orderId: typeof search.orderId === "string" ? search.orderId : undefined,
   }),
-  head: () => ({ meta: [{ title: "Order Confirmation - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.orderConfirmationTitle") }] }),
 });
 
 function OrderConfirmationPage() {

@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CheckCircle2, PackageCheck, ShoppingBag, Truck, UserRound } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useAuth } from "@/lib/auth";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import {
   formatOrderStatus,
   formatPaymentStatus,
@@ -17,7 +17,7 @@ import cartIcon from "@/assets/cart-icon.png";
 
 export const Route = createFileRoute("/client-dashboard")({
   component: ClientDashboardPage,
-  head: () => ({ meta: [{ title: "Client dashboard - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.clientDashboardTitle") }] }),
 });
 
 function ClientDashboardPage() {
@@ -47,7 +47,7 @@ function ClientDashboardPage() {
 
   if (!hydrated) return null;
   if (!user) return <Navigate to="/signin" search={{ redirect: "/client-dashboard" } as never} />;
-  if (user.role === "manager" || user.role === "staff") return <Navigate to="/admin-dashboard" />;
+  if (user.role === "manager" || user.role === "staff") return <Navigate to="/dashboard" />;
 
   return (
     <div className="container mx-auto px-4 py-8">

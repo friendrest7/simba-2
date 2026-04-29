@@ -3,13 +3,13 @@ import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { getSupabaseBrowserClient, hasSupabaseConfig } from "@/lib/supabase";
 import { CheckCircle2, ShieldCheck } from "lucide-react";
 
 export const Route = createFileRoute("/reset-password")({
   component: ResetPasswordPage,
-  head: () => ({ meta: [{ title: "Reset password - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.resetPasswordTitle") }] }),
 });
 
 function ResetPasswordPage() {

@@ -8,11 +8,10 @@ import {
   PackageCheck,
   Search,
   Truck,
-  XCircle,
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import {
   formatOrderStatus,
@@ -38,7 +37,7 @@ const STATUS_OPTIONS: OrderStatus[] = [
 
 export const Route = createFileRoute("/dashboard")({
   component: DashboardPage,
-  head: () => ({ meta: [{ title: "Market Rep Dashboard - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.marketRepDashboardTitle") }] }),
 });
 
 function DashboardPage() {
@@ -46,6 +45,7 @@ function DashboardPage() {
   const [orders, setOrders] = useState<CustomerOrder[]>([]);
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [query, setQuery] = useState("");
+  const [statusMessage, setStatusMessage] = useState<string | null>(null);
 
   useEffect(() => {
     const sync = () => setOrders(getOrders());
@@ -74,7 +74,9 @@ function DashboardPage() {
   const stats = {
     total: orders.length,
     pending: orders.filter((order) => order.status === "pending").length,
-    accepted: orders.filter((order) => order.status === "accepted").length,
+    accepted: orders.filter((order) =>
+      ["accepted", "preparing", "ready", "out-for-delivery"].includes(order.status),
+    ).length,
     delivered: orders.filter((order) => order.status === "delivered").length,
     revenue: getRevenue(orders),
   };
@@ -119,7 +121,7 @@ function DashboardPage() {
           />
           <StatCard
             icon={<CheckCircle2 className="h-4 w-4" />}
-            label={t("order.status.accepted")}
+            label={t("dashboard.confirmedOrders")}
             value={String(stats.accepted)}
           />
           <StatCard
@@ -177,8 +179,21 @@ function DashboardPage() {
             </div>
           ) : (
             <div className="mt-6 grid gap-4">
+              {statusMessage && (
+                <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 px-4 py-3 text-sm font-semibold text-emerald-700">
+                  {statusMessage}
+                </div>
+              )}
               {filteredOrders.map((order) => (
-                <OrderCard key={order.id} order={order} />
+                <OrderCard
+                  key={order.id}
+                  order={order}
+                  onStatusChange={(nextStatus) =>
+                    setStatusMessage(
+                      `${t("dashboard.statusUpdated")}: ${order.id} - ${formatOrderStatus(nextStatus, t)}`,
+                    )
+                  }
+                />
               ))}
             </div>
           )}
@@ -188,8 +203,20 @@ function DashboardPage() {
   );
 }
 
-function OrderCard({ order }: { order: CustomerOrder }) {
+function OrderCard({
+  order,
+  onStatusChange,
+}: {
+  order: CustomerOrder;
+  onStatusChange: (status: OrderStatus) => void;
+}) {
   const { t } = useI18n();
+  const handleStatusChange = (nextStatus: OrderStatus) => {
+    const updated = updateOrderStatus(order.id, nextStatus);
+    if (updated) {
+      onStatusChange(nextStatus);
+    }
+  };
 
   return (
     <article className="rounded-[1.75rem] border border-border bg-background/80 p-5 shadow-sm">
@@ -258,33 +285,33 @@ function OrderCard({ order }: { order: CustomerOrder }) {
           <div className="mt-3 space-y-2">
             <ActionButton
               label={t("dashboard.acceptOrder")}
-              onClick={() => updateOrderStatus(order.id, "accepted")}
+              onClick={() => handleStatusChange("accepted")}
               disabled={order.status === "accepted"}
             />
             <ActionButton
               label={t("dashboard.rejectOrder")}
-              onClick={() => updateOrderStatus(order.id, "rejected")}
+              onClick={() => handleStatusChange("rejected")}
               disabled={order.status === "rejected"}
               tone="danger"
             />
             <ActionButton
               label={t("dashboard.markPreparing")}
-              onClick={() => updateOrderStatus(order.id, "preparing")}
+              onClick={() => handleStatusChange("preparing")}
               disabled={order.status === "preparing"}
             />
             <ActionButton
               label={t("dashboard.markReady")}
-              onClick={() => updateOrderStatus(order.id, "ready")}
+              onClick={() => handleStatusChange("ready")}
               disabled={order.status === "ready"}
             />
             <ActionButton
               label={t("dashboard.markOutForDelivery")}
-              onClick={() => updateOrderStatus(order.id, "out-for-delivery")}
+              onClick={() => handleStatusChange("out-for-delivery")}
               disabled={order.status === "out-for-delivery"}
             />
             <ActionButton
               label={t("dashboard.markDelivered")}
-              onClick={() => updateOrderStatus(order.id, "delivered")}
+              onClick={() => handleStatusChange("delivered")}
               disabled={order.status === "delivered"}
             />
           </div>

@@ -5,7 +5,7 @@ import { Label } from "@/components/ui/label";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useAuth } from "@/lib/auth";
 import { getAuthConfig, warnUnconfiguredAuthProviders } from "@/lib/authConfig";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import {
   createBrowserRedirectUrl,
   getSupabaseBrowserClient,
@@ -34,7 +34,7 @@ export const Route = createFileRoute("/signin")({
     redirect: typeof s.redirect === "string" ? s.redirect : undefined,
     intent: s.intent === "admin" || s.intent === "client" ? s.intent : undefined,
   }),
-  head: () => ({ meta: [{ title: "Sign in - Simba Supermarket" }] }),
+  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.signInTitle") }] }),
 });
 
 function SignInPage() {
@@ -66,7 +66,7 @@ function SignInPage() {
   const dashboardFor = useCallback(
     (sessionUser: SessionUser | null) =>
       sessionUser?.role === "manager" || sessionUser?.role === "staff"
-        ? "/admin-dashboard"
+        ? "/dashboard"
         : "/client-dashboard",
     [],
   );
