@@ -479,6 +479,184 @@ const flowExtras: Record<Lang, Record<string, string>> = {
   },
 };
 
+const commerceUpgradeExtras: Record<Lang, Record<string, string>> = {
+  en: {
+    "ui.currency": "Currency",
+    "cart.clear": "Clear cart",
+    "cart.checkoutHint":
+      "Review item quantities, then continue to checkout to enter delivery details and payment.",
+    "checkout.deliveryNotes": "Delivery notes",
+    "checkout.deliveryNotesHint": "Gate code, landmark, floor, or rider instructions",
+    "checkout.reviewOrder": "Ready for checkout",
+    "checkout.cashInstruction":
+      "The order will be saved now and payment will be collected when the groceries arrive.",
+    "checkout.momoInstruction":
+      "Enter an MTN or Airtel number, then place the order to simulate MoMo authorization.",
+    "checkout.paymentProcessing": "Processing MoMo payment",
+    "checkout.paymentProcessingHint":
+      "We are contacting the mobile money network and confirming the payment request.",
+    "checkout.paymentSuccess": "MoMo payment approved",
+    "checkout.paymentSuccessHint":
+      "The payment was confirmed successfully and the order is ready to be sent to the market rep.",
+    "order.paymentStatusLabel": "Payment status",
+    "order.payment.pending": "Pending",
+    "order.payment.processing": "Processing",
+    "order.payment.paid": "Paid",
+    "order.payment.cash-on-delivery": "Cash on delivery",
+    "order.payment.rejected": "Rejected",
+    "order.status.ready": "Ready",
+    "order.status.rejected": "Rejected",
+    "order.delivery.ready": "The order is packed and ready for dispatch.",
+    "order.delivery.rejected": "The order was rejected by the market rep.",
+    "dashboard.acceptOrder": "Accept order",
+    "dashboard.rejectOrder": "Reject order",
+    "dashboard.markPreparing": "Mark preparing",
+    "dashboard.markReady": "Mark ready",
+    "dashboard.markOutForDelivery": "Mark out for delivery",
+    "dashboard.markDelivered": "Mark delivered",
+  },
+  fr: {
+    "ui.currency": "Devise",
+    "cart.clear": "Vider le panier",
+    "cart.checkoutHint":
+      "Verifiez les quantites puis passez au paiement pour ajouter la livraison et le paiement.",
+    "checkout.deliveryNotes": "Notes de livraison",
+    "checkout.deliveryNotesHint": "Code du portail, repere, etage ou instructions du livreur",
+    "checkout.reviewOrder": "Pret pour le paiement",
+    "checkout.cashInstruction":
+      "La commande sera enregistree maintenant et le paiement sera collecte a la livraison.",
+    "checkout.momoInstruction":
+      "Entrez un numero MTN ou Airtel puis validez pour simuler l'autorisation MoMo.",
+    "checkout.paymentProcessing": "Paiement MoMo en cours",
+    "checkout.paymentProcessingHint":
+      "Nous contactons le reseau Mobile Money et confirmons la demande de paiement.",
+    "checkout.paymentSuccess": "Paiement MoMo approuve",
+    "checkout.paymentSuccessHint":
+      "Le paiement a ete confirme avec succes et la commande peut etre envoyee au representant.",
+    "order.paymentStatusLabel": "Statut du paiement",
+    "order.payment.pending": "En attente",
+    "order.payment.processing": "En traitement",
+    "order.payment.paid": "Paye",
+    "order.payment.cash-on-delivery": "Paiement a la livraison",
+    "order.payment.rejected": "Rejete",
+    "order.status.ready": "Prete",
+    "order.status.rejected": "Rejetee",
+    "order.delivery.ready": "La commande est preparee et prete pour l'expedition.",
+    "order.delivery.rejected": "La commande a ete rejetee par le representant.",
+    "dashboard.acceptOrder": "Accepter la commande",
+    "dashboard.rejectOrder": "Rejeter la commande",
+    "dashboard.markPreparing": "Marquer en preparation",
+    "dashboard.markReady": "Marquer prete",
+    "dashboard.markOutForDelivery": "Marquer en livraison",
+    "dashboard.markDelivered": "Marquer livree",
+  },
+  rw: {
+    "ui.currency": "Ifaranga",
+    "cart.clear": "Siba ibiri mu gakapu",
+    "cart.checkoutHint":
+      "Banza usuzume umubare w'ibicuruzwa, hanyuma ukomeze kuri checkout wongeremo amakuru yo kugemura no kwishyura.",
+    "checkout.deliveryNotes": "Inyandiko zo kugemura",
+    "checkout.deliveryNotesHint":
+      "Kode y'irembo, ikimenyetso, etaje cyangwa amabwiriza y'uyigemura",
+    "checkout.reviewOrder": "Byiteguye kuri checkout",
+    "checkout.cashInstruction":
+      "Itumiza riza kubikwa ubu, amafaranga akazishyurwa igihe ibyo watumije bigeze aho uri.",
+    "checkout.momoInstruction":
+      "Andika nimero ya MTN cyangwa Airtel, hanyuma wohereze order kugira ngo dukore MoMo ya demo.",
+    "checkout.paymentProcessing": "Kwishyura kwa MoMo kurimo gukorwa",
+    "checkout.paymentProcessingHint":
+      "Turimo kuvugana na Mobile Money no kwemeza ubusabe bwo kwishyura.",
+    "checkout.paymentSuccess": "Kwishyura kwa MoMo kwemejwe",
+    "checkout.paymentSuccessHint":
+      "Amafaranga yemejwe neza kandi itumiza rigiye koherezwa ku muhagarariye isoko.",
+    "order.paymentStatusLabel": "Status yo kwishyura",
+    "order.payment.pending": "Bitegereje",
+    "order.payment.processing": "Birimo gutunganywa",
+    "order.payment.paid": "Byishyuwe",
+    "order.payment.cash-on-delivery": "Kwishyura wakiriye",
+    "order.payment.rejected": "Byanzwe",
+    "order.status.ready": "Byiteguye",
+    "order.status.rejected": "Byanzwe",
+    "order.delivery.ready": "Itumiza ryapakiwe kandi ryiteguye koherezwa.",
+    "order.delivery.rejected": "Itumiza ryanzwe n'uhagarariye isoko.",
+    "dashboard.acceptOrder": "Emeza itumiza",
+    "dashboard.rejectOrder": "Anga itumiza",
+    "dashboard.markPreparing": "Shyira ku birimo gutegurwa",
+    "dashboard.markReady": "Shyira ku byiteguye",
+    "dashboard.markOutForDelivery": "Shyira ku byoherejwe kugemurwa",
+    "dashboard.markDelivered": "Shyira ku byagejejwe",
+  },
+  sw: {
+    "ui.currency": "Sarafu",
+    "cart.clear": "Futa kikapu",
+    "cart.checkoutHint":
+      "Kagua kiasi cha bidhaa kwanza, kisha endelea kwenye checkout kuweka delivery na malipo.",
+    "checkout.deliveryNotes": "Maelezo ya delivery",
+    "checkout.deliveryNotesHint": "Namba ya geti, alama, floor, au maelekezo ya rider",
+    "checkout.reviewOrder": "Tayari kwa checkout",
+    "checkout.cashInstruction": "Oda itahifadhiwa sasa na malipo yatakusanywa bidhaa zitakapofika.",
+    "checkout.momoInstruction":
+      "Weka namba ya MTN au Airtel, kisha weka oda ili kusimulate uthibitisho wa MoMo.",
+    "checkout.paymentProcessing": "Malipo ya MoMo yanachakatwa",
+    "checkout.paymentProcessingHint":
+      "Tunawasiliana na mtandao wa Mobile Money na kuthibitisha ombi la malipo.",
+    "checkout.paymentSuccess": "Malipo ya MoMo yamekubaliwa",
+    "checkout.paymentSuccessHint":
+      "Malipo yamethibitishwa kwa mafanikio na oda iko tayari kupelekwa kwa mwakilishi.",
+    "order.paymentStatusLabel": "Hali ya malipo",
+    "order.payment.pending": "Inasubiri",
+    "order.payment.processing": "Inachakatwa",
+    "order.payment.paid": "Imelipwa",
+    "order.payment.cash-on-delivery": "Lipa unapopokea",
+    "order.payment.rejected": "Imekataliwa",
+    "order.status.ready": "Iko tayari",
+    "order.status.rejected": "Imekataliwa",
+    "order.delivery.ready": "Oda imefungwa na iko tayari kutumwa.",
+    "order.delivery.rejected": "Oda imekataliwa na mwakilishi wa soko.",
+    "dashboard.acceptOrder": "Kubali oda",
+    "dashboard.rejectOrder": "Kataa oda",
+    "dashboard.markPreparing": "Weka inaandaliwa",
+    "dashboard.markReady": "Weka iko tayari",
+    "dashboard.markOutForDelivery": "Weka iko njiani kuletwa",
+    "dashboard.markDelivered": "Weka imewasilishwa",
+  },
+  tr: {
+    "ui.currency": "Para birimi",
+    "cart.clear": "Sepeti temizle",
+    "cart.checkoutHint":
+      "Urun adetlerini kontrol et, sonra teslimat ve odeme bilgileri icin checkout'a gec.",
+    "checkout.deliveryNotes": "Teslimat notlari",
+    "checkout.deliveryNotesHint": "Kapi kodu, tarif, kat veya kurye notu",
+    "checkout.reviewOrder": "Checkout icin hazir",
+    "checkout.cashInstruction":
+      "Siparis simdi kaydedilecek ve odeme market urunleri ulasinca alinacak.",
+    "checkout.momoInstruction":
+      "MTN veya Airtel numarasi gir, sonra MoMo onayini simule etmek icin siparisi ver.",
+    "checkout.paymentProcessing": "MoMo odemesi isleniyor",
+    "checkout.paymentProcessingHint":
+      "Mobile Money agi ile gorusuyor ve odeme istegini dogruluyoruz.",
+    "checkout.paymentSuccess": "MoMo odemesi onaylandi",
+    "checkout.paymentSuccessHint":
+      "Odeme basariyla dogrulandi ve siparis market temsilcisine gonderilmeye hazir.",
+    "order.paymentStatusLabel": "Odeme durumu",
+    "order.payment.pending": "Bekliyor",
+    "order.payment.processing": "Isleniyor",
+    "order.payment.paid": "Odendi",
+    "order.payment.cash-on-delivery": "Kapida odeme",
+    "order.payment.rejected": "Reddedildi",
+    "order.status.ready": "Hazir",
+    "order.status.rejected": "Reddedildi",
+    "order.delivery.ready": "Siparis paketlendi ve sevkiyata hazir.",
+    "order.delivery.rejected": "Siparis market temsilcisi tarafindan reddedildi.",
+    "dashboard.acceptOrder": "Siparisi kabul et",
+    "dashboard.rejectOrder": "Siparisi reddet",
+    "dashboard.markPreparing": "Hazirlaniyor olarak isaretle",
+    "dashboard.markReady": "Hazir olarak isaretle",
+    "dashboard.markOutForDelivery": "Teslimata cikti olarak isaretle",
+    "dashboard.markDelivered": "Teslim edildi olarak isaretle",
+  },
+};
+
 export const extraDictionaries: Record<Lang, Record<string, string>> = {
   en: {
     "app.location": "Pickup branch",
@@ -645,6 +823,7 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
     "feature.secureDesc": "Mobile Money or pay at pickup",
     "ui.fastDeliveryBanner": "Pickup-first grocery ordering",
     ...flowExtras.en,
+    ...commerceUpgradeExtras.en,
   },
   fr: {
     "app.location": "Point de retrait",
@@ -722,6 +901,7 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
     "pickup.instructions":
       "Votre commande est reservee uniquement apres validation du stock de la branche choisie.",
     ...flowExtras.fr,
+    ...commerceUpgradeExtras.fr,
   },
   rw: {
     "app.location": "Ishami ryo gufatiramo",
@@ -890,6 +1070,7 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
     "feature.secureDesc": "Mobile Money cyangwa wishyure ku ishami",
     "ui.fastDeliveryBanner": "Ordering ya grocery yubakiwe pickup",
     ...flowExtras.rw,
+    ...commerceUpgradeExtras.rw,
   },
   sw: {
     "app.location": "Tawi la kuchukulia",
@@ -1058,6 +1239,7 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
     "feature.secureDesc": "Mobile Money au lipa wakati wa pickup",
     "ui.fastDeliveryBanner": "Uagizaji wa grocery wa pickup-first",
     ...flowExtras.sw,
+    ...commerceUpgradeExtras.sw,
   },
   tr: {
     "app.location": "Teslim alma subesi",
@@ -1222,5 +1404,6 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
     "feature.secureDesc": "Mobile Money veya teslim alirken odeme",
     "ui.fastDeliveryBanner": "Teslim alma odakli market akisi",
     ...flowExtras.tr,
+    ...commerceUpgradeExtras.tr,
   },
 };

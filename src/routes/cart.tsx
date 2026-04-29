@@ -20,6 +20,7 @@ function CartPage() {
     count,
     setQty,
     remove,
+    clear,
     selectedBranch,
     overLimitItems,
     stockOf,
@@ -38,7 +39,11 @@ function CartPage() {
           <div className="text-sm font-semibold text-foreground">{t("ui.orderSummary")}</div>
           <p className="mt-2 text-sm text-muted-foreground">{t("checkout.orderSummaryHint")}</p>
         </div>
-        <Button asChild size="lg" className="mt-6 rounded-full gradient-brand text-brand-foreground">
+        <Button
+          asChild
+          size="lg"
+          className="mt-6 rounded-full gradient-brand text-brand-foreground"
+        >
           <Link to="/products">{t("cart.continue")}</Link>
         </Button>
       </div>
@@ -47,10 +52,17 @@ function CartPage() {
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <h1 className="text-3xl font-extrabold tracking-tight">{t("cart.title")}</h1>
-      <p className="mt-1 text-sm text-muted-foreground">
-        {count} {count === 1 ? t("cart.item") : t("cart.items")}
-      </p>
+      <div className="flex flex-col gap-4 md:flex-row md:items-end md:justify-between">
+        <div>
+          <h1 className="text-3xl font-extrabold tracking-tight">{t("cart.title")}</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {count} {count === 1 ? t("cart.item") : t("cart.items")}
+          </p>
+        </div>
+        <Button variant="outline" className="rounded-full" onClick={() => void clear()}>
+          {t("cart.clear")}
+        </Button>
+      </div>
 
       <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_360px]">
         <div className="space-y-4">
@@ -101,6 +113,9 @@ function CartPage() {
           <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4 font-bold">
             <span>{t("cart.total")}</span>
             <span className="text-2xl tabular-nums text-primary">{formatRWF(total)}</span>
+          </div>
+          <div className="mt-4 rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
+            {t("cart.checkoutHint")}
           </div>
           <Button
             asChild

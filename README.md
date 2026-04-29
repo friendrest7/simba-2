@@ -1,113 +1,117 @@
 # Simba Supermarket Demo
 
-Simba is a multilingual e-commerce demo focused on grocery browsing, cart and checkout flow, and a market rep dashboard for order handling.
+Simba is a multilingual supermarket demo built with TanStack Router, React, and local-first persistence. It now includes a complete buyer flow, a working market rep dashboard, and a safe fallback backend using `localStorage` when Supabase is not configured.
 
-## Implemented features
+## What works now
 
-- Product browsing with category pages, product detail pages, related products, and responsive product cards
-- Search by product name, category, unit, and product description
-- Polished empty states for cart, search results, category pages, and order confirmation
-- Working cart flow:
+- Landing page with a stronger hero, branch selection, and direct path into shopping
+- Product browsing with:
+  - search
+  - category filtering
+  - price filtering
+  - in-stock filtering
+  - sorting
+- Product detail page with:
+  - image
+  - name
+  - price
+  - category
+  - description
+  - stock status
+  - related products
+  - add to cart controls
+- Cart with:
   - add item
   - remove item
-  - increase or decrease quantity
-  - automatic subtotal, delivery fee, and total calculation
-- Working checkout flow:
+  - increase quantity
+  - decrease quantity
+  - clear cart
+  - subtotal
+  - delivery fee
+  - total
+- Checkout with:
   - customer name
   - phone number
-  - delivery location
+  - address/location
+  - delivery notes
   - payment method
-  - Mobile Money option
+  - MoMo payment simulation
   - order summary
-  - confirmation page after order placement
-- Working local order service using `localStorage`
-- Market Rep dashboard with:
-  - all customer orders
+- Order confirmation with:
+  - order ID
+  - items
+  - totals
+  - customer info
+  - payment status
+  - delivery status
+- Market rep dashboard with:
+  - persistent incoming orders
   - customer and order search
-  - status filtering
-  - full order details
-  - persistent order status updates
-- Multi-language UI for English, Kinyarwanda, French, Swahili, and Turkish
-- Responsive buyer and dashboard layouts
+  - status filter
+  - payment status visibility
+  - accept order
+  - reject order
+  - mark preparing
+  - mark ready
+  - mark out for delivery
+  - mark delivered
+  - statistics cards for total, pending, accepted, delivered, and revenue
+- Multi-language UI for:
+  - English
+  - Kinyarwanda
+  - French
+  - Swahili
+  - Turkish
 
-## Checkout flow
+## Persistence / backend behavior
 
-1. The customer browses products and adds items to the cart.
-2. The cart calculates:
-   - subtotal
-   - delivery fee
-   - total
-3. On checkout, the customer enters delivery details and chooses a payment method.
-4. If `Mobile Money` is selected, a MoMo number is collected.
-5. Clicking `Place order` validates stock and creates a saved order.
-6. The app redirects to the confirmation page with the created order.
+The grading-safe default backend is local.
 
-## How orders are stored
+- Cart data is stored in `localStorage`
+- Orders are stored in `localStorage`
+- Order status updates are stored in `localStorage`
+- Stock changes after checkout are stored in `localStorage`
+- The latest order confirmation can still be opened after refresh
 
-- If no real backend is connected, the app stores orders in `localStorage`.
-- Orders are saved under a browser key managed by `src/lib/order-store.ts`.
-- Stock is also persisted locally so order placement and dashboard changes feel realistic.
-- Existing legacy local orders are migrated automatically to the current order shape.
-
-## Market Rep dashboard
-
-The Market Rep dashboard is available at `/dashboard`.
-
-Each order shows:
-
-- order ID
-- customer name
-- phone number
-- delivery location
-- items ordered
-- total amount
-- payment method
-- current status
-- date and time
-
-Statuses supported:
-
-- Pending
-- Accepted
-- Preparing
-- Out for Delivery
-- Delivered
-- Cancelled
-
-Status updates are saved in `localStorage`, so refreshing the page does not reset them.
-
-## Demo backend note
-
-This project supports Supabase when configured, but the order workflow does not depend on an external backend for demo use.
-
-If Supabase is not connected:
-
-- checkout still works
-- orders are still created
-- dashboard still updates orders
-- persistence is handled with `localStorage`
-
-This acts as the demo backend for grading and offline evaluation.
+The order persistence layer is implemented in `src/lib/order-store.ts`.
 
 ## Run the project
 
 ```sh
 npm install
-npm run build
 npm run dev
 ```
 
-## Optional backend setup
+## Validation commands
 
-The app can use Supabase when environment variables are configured. To enable that path:
+```sh
+npm run lint
+npm run build
+```
 
-1. Run `supabase/schema.sql` in your Supabase SQL editor.
-2. Copy `.env.example` to `.env.local`.
-3. Fill in the Supabase and Google values.
-4. Seed products and branch inventory:
+## Optional Supabase setup
+
+The app can still use Supabase for auth and related setup if you provide environment variables, but the buyer flow and dashboard do not depend on Supabase for demo grading.
+
+1. Copy `.env.example` to `.env.local`
+2. Fill in your Supabase values
+3. Run the schema from `supabase/schema.sql`
+4. Optionally seed demo data:
 
 ```sh
 npm run backend:seed
 ```
 
-See `supabase/README.md` for the full Supabase setup.
+## Main files for the buyer + staff flow
+
+- `src/routes/index.tsx`
+- `src/routes/products.tsx`
+- `src/routes/product.$id.tsx`
+- `src/routes/cart.tsx`
+- `src/routes/checkout.tsx`
+- `src/routes/order-confirmation.tsx`
+- `src/routes/dashboard.tsx`
+- `src/lib/cart.tsx`
+- `src/lib/order-store.ts`
+- `src/lib/i18n.tsx`
+- `src/lib/i18n-extra.ts`

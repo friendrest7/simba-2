@@ -1,33 +1,47 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useState, type HTMLAttributes, type HTMLInputTypeAttribute } from "react";
-import { CreditCard, MapPin, UserRound } from "lucide-react";
+import {
+  CheckCircle2,
+  CreditCard,
+  LoaderCircle,
+  MapPin,
+  Smartphone,
+  UserRound,
+} from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
+import { Textarea } from "@/components/ui/textarea";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
-import type { PaymentMethod } from "@/lib/order-store";
+import type { PaymentMethod, PaymentStatus } from "@/lib/order-store";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
   head: () => ({ meta: [{ title: "Checkout - Simba Supermarket" }] }),
 });
 
+type PaymentStage = "idle" | "processing" | "success";
+
 function CheckoutPage() {
-  const { items, subtotal, deliveryFee, total, count, checkout } = useCart();
+  const { items, subtotal, deliveryFee, total, count, checkout, selectedBranch } = useCart();
   const { t } = useI18n();
   const navigate = useNavigate();
-  const [loading, setLoading] = useState(false);
+  const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile-money");
+  const [paymentStage, setPaymentStage] = useState<PaymentStage>("idle");
+  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
   const [formData, setFormData] = useState({
     customerName: "",
     phoneNumber: "",
     deliveryLocation: "",
+    deliveryNotes: "",
     momoNumber: "",
   });
   const normalizedPhoneNumber = formData.phoneNumber.replace(/[^\d+]/g, "");
+  const normalizedMomoNumber = formData.momoNumber.replace(/[^\d+]/g, "");
 
   useEffect(() => {
     if (count === 0) {
@@ -57,22 +71,41 @@ function CheckoutPage() {
       return;
     }
 
-    if (paymentMethod === "mobile-money" && !formData.momoNumber.trim()) {
+    if (paymentMethod === "mobile-money" && !isValidPhoneNumber(normalizedMomoNumber)) {
       setError(t("checkout.error.momo"));
       return;
     }
 
-    setLoading(true);
+    setSubmitting(true);
+
+    let nextPaymentStatus: PaymentStatus = "cash-on-delivery";
+
+    if (paymentMethod === "mobile-money") {
+      setPaymentStage("processing");
+      setPaymentStatus("processing");
+      await delay(1200);
+      await delay(800);
+      setPaymentStage("success");
+      setPaymentStatus("paid");
+      nextPaymentStatus = "paid";
+      await delay(500);
+    }
+
     const result = await checkout({
       customerName: formData.customerName.trim(),
       phoneNumber: normalizedPhoneNumber,
       deliveryLocation: formData.deliveryLocation.trim(),
+      deliveryNotes: formData.deliveryNotes.trim(),
       paymentMethod,
-      momoNumber: paymentMethod === "mobile-money" ? formData.momoNumber.trim() : undefined,
+      momoNumber: paymentMethod === "mobile-money" ? normalizedMomoNumber : undefined,
+      paymentStatus: nextPaymentStatus,
     });
-    setLoading(false);
+
+    setSubmitting(false);
 
     if (!result.ok) {
+      setPaymentStage("idle");
+      setPaymentStatus("pending");
       setError(
         result.productName
           ? `${t("checkout.error.stockUnavailable")} ${result.productName}.`
@@ -93,10 +126,12 @@ function CheckoutPage() {
         <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
           {t("checkout.title")}
         </h1>
-        <p className="mt-2 text-sm text-muted-foreground">{t("checkout.subtitleShort")}</p>
+        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
+          {t("checkout.subtitleShort")}
+        </p>
       </div>
 
-      <form onSubmit={submitOrder} className="grid gap-6 lg:grid-cols-[1fr_360px]">
+      <form onSubmit={submitOrder} className="grid gap-6 lg:grid-cols-[1fr_380px]">
         <div className="space-y-6">
           <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
             <div className="mb-4 flex items-center gap-3">
@@ -140,15 +175,26 @@ function CheckoutPage() {
                 </p>
               </div>
             </div>
-            <Field
-              id="delivery-location"
-              label={t("checkout.deliveryLocationLabel")}
-              value={formData.deliveryLocation}
-              onChange={(value) =>
-                setFormData((current) => ({ ...current, deliveryLocation: value }))
-              }
-              placeholder={t("checkout.addressPh")}
-            />
+            <div className="grid gap-4">
+              <Field
+                id="delivery-location"
+                label={t("checkout.deliveryLocationLabel")}
+                value={formData.deliveryLocation}
+                onChange={(value) =>
+                  setFormData((current) => ({ ...current, deliveryLocation: value }))
+                }
+                placeholder={t("checkout.addressPh")}
+              />
+              <TextAreaField
+                id="delivery-notes"
+                label={t("checkout.deliveryNotes")}
+                value={formData.deliveryNotes}
+                onChange={(value) =>
+                  setFormData((current) => ({ ...current, deliveryNotes: value }))
+                }
+                placeholder={t("checkout.deliveryNotesHint")}
+              />
+            </div>
           </section>
 
           <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
@@ -164,19 +210,29 @@ function CheckoutPage() {
             <div className="grid gap-3 md:grid-cols-2">
               <PaymentOption
                 active={paymentMethod === "mobile-money"}
-                onClick={() => setPaymentMethod("mobile-money")}
+                onClick={() => {
+                  setPaymentMethod("mobile-money");
+                  setPaymentStage("idle");
+                  setPaymentStatus("pending");
+                }}
                 label={t("checkout.mobileMoney")}
                 hint={t("checkout.mobileMoneyHint")}
+                icon={<Smartphone className="h-4 w-4" />}
               />
               <PaymentOption
                 active={paymentMethod === "cash-on-delivery"}
-                onClick={() => setPaymentMethod("cash-on-delivery")}
+                onClick={() => {
+                  setPaymentMethod("cash-on-delivery");
+                  setPaymentStage("idle");
+                  setPaymentStatus("cash-on-delivery");
+                }}
                 label={t("checkout.cashOnDelivery")}
                 hint={t("checkout.cashOnDeliveryHint")}
+                icon={<CreditCard className="h-4 w-4" />}
               />
             </div>
-            {paymentMethod === "mobile-money" && (
-              <div className="mt-4">
+            {paymentMethod === "mobile-money" ? (
+              <div className="mt-4 grid gap-4">
                 <Field
                   id="momo-number"
                   label={t("ui.mobileMoneyNumber")}
@@ -188,6 +244,11 @@ function CheckoutPage() {
                   inputMode="tel"
                   placeholder={t("signin.phonePh")}
                 />
+                <PaymentStateCard stage={paymentStage} />
+              </div>
+            ) : (
+              <div className="mt-4 rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
+                {t("checkout.cashInstruction")}
               </div>
             )}
           </section>
@@ -195,6 +256,12 @@ function CheckoutPage() {
 
         <aside className="h-fit rounded-[2rem] border border-border bg-card p-6 shadow-sm lg:sticky lg:top-20">
           <h2 className="mb-4 text-xl font-extrabold">{t("ui.orderSummary")}</h2>
+          <div className="mb-4 rounded-2xl border border-primary/15 bg-primary/6 p-4">
+            <div className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
+              {t("checkout.reviewOrder")}
+            </div>
+            <div className="mt-2 text-sm text-muted-foreground">{selectedBranch}</div>
+          </div>
           <div className="space-y-3">
             {items.map(({ product, qty }) => (
               <div
@@ -222,16 +289,28 @@ function CheckoutPage() {
             <span className="font-semibold">{t("cart.total")}</span>
             <span className="text-2xl font-black text-primary">{formatRWF(total)}</span>
           </div>
-          <div className="mt-4 rounded-2xl border border-primary/15 bg-primary/6 p-4 text-sm text-muted-foreground">
-            {t("checkout.orderSummaryHint")}
+          <div className="mt-4 rounded-2xl border border-border bg-background/70 p-4 text-sm">
+            <div className="font-semibold text-foreground">{t("order.paymentStatusLabel")}</div>
+            <div className="mt-1 text-muted-foreground">
+              {t(
+                `order.payment.${
+                  paymentMethod === "cash-on-delivery" ? "cash-on-delivery" : paymentStatus
+                }`,
+              )}
+            </div>
           </div>
           {error && (
             <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
               {error}
             </div>
           )}
-          <Button type="submit" size="lg" className="mt-6 w-full rounded-full" disabled={loading}>
-            {loading ? t("ui.processing") : t("checkout.placeOrder")}
+          <Button
+            type="submit"
+            size="lg"
+            className="mt-6 w-full rounded-full"
+            disabled={submitting}
+          >
+            {submitting ? t("ui.processing") : t("checkout.placeOrder")}
           </Button>
           <Button asChild variant="ghost" className="mt-2 w-full rounded-full">
             <Link to="/cart">{t("ui.backToCart")}</Link>
@@ -275,16 +354,45 @@ function Field({
   );
 }
 
+function TextAreaField({
+  id,
+  label,
+  value,
+  onChange,
+  placeholder,
+}: {
+  id: string;
+  label: string;
+  value: string;
+  onChange: (value: string) => void;
+  placeholder?: string;
+}) {
+  return (
+    <div>
+      <Label htmlFor={id}>{label}</Label>
+      <Textarea
+        id={id}
+        value={value}
+        placeholder={placeholder}
+        onChange={(event) => onChange(event.target.value)}
+        className="mt-1.5 min-h-28 rounded-xl"
+      />
+    </div>
+  );
+}
+
 function PaymentOption({
   active,
   onClick,
   label,
   hint,
+  icon,
 }: {
   active: boolean;
   onClick: () => void;
   label: string;
   hint: string;
+  icon: React.ReactNode;
 }) {
   return (
     <button
@@ -296,9 +404,46 @@ function PaymentOption({
           : "border-border bg-background hover:border-primary/40"
       }`}
     >
-      <div className="text-sm font-semibold text-foreground">{label}</div>
+      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
+        <span className="text-primary">{icon}</span>
+        {label}
+      </div>
       <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
     </button>
+  );
+}
+
+function PaymentStateCard({ stage }: { stage: PaymentStage }) {
+  const { t } = useI18n();
+
+  if (stage === "idle") {
+    return (
+      <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
+        {t("checkout.momoInstruction")}
+      </div>
+    );
+  }
+
+  if (stage === "success") {
+    return (
+      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-700">
+        <div className="flex items-center gap-2 font-semibold">
+          <CheckCircle2 className="h-4 w-4" />
+          {t("checkout.paymentSuccess")}
+        </div>
+        <div className="mt-1 text-emerald-700/80">{t("checkout.paymentSuccessHint")}</div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="rounded-2xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
+      <div className="flex items-center gap-2 font-semibold">
+        <LoaderCircle className="h-4 w-4 animate-spin" />
+        {t("checkout.paymentProcessing")}
+      </div>
+      <div className="mt-1 text-primary/80">{t("checkout.paymentProcessingHint")}</div>
+    </div>
   );
 }
 
@@ -314,4 +459,8 @@ function SummaryRow({ label, value }: { label: string; value: string }) {
 function isValidPhoneNumber(phoneNumber: string) {
   const digitsOnly = phoneNumber.replace(/\D/g, "");
   return digitsOnly.length >= 9 && digitsOnly.length <= 15;
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => window.setTimeout(resolve, ms));
 }

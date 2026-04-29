@@ -34,54 +34,56 @@ export const STORE = data.store as {
 
 export const PRODUCTS: Product[] = data.products as Product[];
 
-const CATEGORY_META: Record<string, { slug: string; emoji: string; color: string; icon: LucideIcon }> =
-  {
-    "Alcoholic Drinks": {
-      slug: "alcoholic-drinks",
-      emoji: "🍷",
-      color: "oklch(0.55 0.22 15)",
-      icon: Wine,
-    },
-    "Cosmetics & Personal Care": {
-      slug: "cosmetics",
-      emoji: "💄",
-      color: "oklch(0.7 0.18 350)",
-      icon: Sparkles,
-    },
-    General: {
-      slug: "general",
-      emoji: "🛒",
-      color: "oklch(0.6 0.18 250)",
-      icon: ShoppingBasket,
-    },
-    "Food Products": { slug: "food", emoji: "🍎", color: "oklch(0.65 0.2 60)", icon: Apple },
-    "Kitchenware & Electronics": {
-      slug: "kitchenware",
-      emoji: "🍳",
-      color: "oklch(0.6 0.18 200)",
-      icon: UtensilsCrossed,
-    },
-    "Cleaning & Sanitary": {
-      slug: "cleaning",
-      emoji: "🧴",
-      color: "oklch(0.65 0.18 180)",
-      icon: Droplets,
-    },
-    "Baby Products": { slug: "baby", emoji: "🧸", color: "oklch(0.7 0.18 30)", icon: Baby },
-    "Pet Care": { slug: "pet", emoji: "🐾", color: "oklch(0.6 0.18 100)", icon: PawPrint },
-    "Kitchen Storage": {
-      slug: "storage",
-      emoji: "📦",
-      color: "oklch(0.55 0.15 270)",
-      icon: Package,
-    },
-    "Sports & Wellness": {
-      slug: "sports",
-      emoji: "⚽",
-      color: "oklch(0.6 0.2 140)",
-      icon: Dumbbell,
-    },
-  };
+const CATEGORY_META: Record<
+  string,
+  { slug: string; emoji: string; color: string; icon: LucideIcon }
+> = {
+  "Alcoholic Drinks": {
+    slug: "alcoholic-drinks",
+    emoji: "🍷",
+    color: "oklch(0.55 0.22 15)",
+    icon: Wine,
+  },
+  "Cosmetics & Personal Care": {
+    slug: "cosmetics",
+    emoji: "💄",
+    color: "oklch(0.7 0.18 350)",
+    icon: Sparkles,
+  },
+  General: {
+    slug: "general",
+    emoji: "🛒",
+    color: "oklch(0.6 0.18 250)",
+    icon: ShoppingBasket,
+  },
+  "Food Products": { slug: "food", emoji: "🍎", color: "oklch(0.65 0.2 60)", icon: Apple },
+  "Kitchenware & Electronics": {
+    slug: "kitchenware",
+    emoji: "🍳",
+    color: "oklch(0.6 0.18 200)",
+    icon: UtensilsCrossed,
+  },
+  "Cleaning & Sanitary": {
+    slug: "cleaning",
+    emoji: "🧴",
+    color: "oklch(0.65 0.18 180)",
+    icon: Droplets,
+  },
+  "Baby Products": { slug: "baby", emoji: "🧸", color: "oklch(0.7 0.18 30)", icon: Baby },
+  "Pet Care": { slug: "pet", emoji: "🐾", color: "oklch(0.6 0.18 100)", icon: PawPrint },
+  "Kitchen Storage": {
+    slug: "storage",
+    emoji: "📦",
+    color: "oklch(0.55 0.15 270)",
+    icon: Package,
+  },
+  "Sports & Wellness": {
+    slug: "sports",
+    emoji: "⚽",
+    color: "oklch(0.6 0.2 140)",
+    icon: Dumbbell,
+  },
+};
 
 export type CategoryInfo = {
   name: string;
@@ -169,7 +171,13 @@ export const formatRWF = (n: number) => {
   const currency = getCurrentCurrency();
   const converted = n * CURRENCY_RATES[currency];
   const locale =
-    currency === "USD" ? "en-US" : currency === "EUR" ? "fr-FR" : currency === "GBP" ? "en-GB" : "en-RW";
+    currency === "USD"
+      ? "en-US"
+      : currency === "EUR"
+        ? "fr-FR"
+        : currency === "GBP"
+          ? "en-GB"
+          : "en-RW";
   const maximumFractionDigits = currency === "RWF" ? 0 : 2;
 
   return new Intl.NumberFormat(locale, {

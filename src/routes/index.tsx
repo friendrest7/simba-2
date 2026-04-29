@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { ArrowRight, ShieldCheck, Store } from "lucide-react";
+import { ArrowRight, CheckCircle2, ShieldCheck, ShoppingBasket, Store, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductCard } from "@/components/ProductCard";
@@ -72,15 +72,32 @@ function HomePage() {
         </video>
         <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,23,17,0.48)_0%,rgba(7,23,17,0.2)_42%,rgba(7,23,17,0.08)_100%),radial-gradient(circle_at_top_right,rgba(255,184,77,0.1),transparent_22%)]" />
         <div className="relative mx-auto flex min-h-[52vh] max-w-7xl flex-col justify-center px-4 py-8 md:min-h-[56vh] md:py-10">
-          <div className="max-w-3xl">
-            <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
-              <ShieldCheck className="h-4 w-4 text-brand-yellow" />
-              {t("hero.badge2")}
+          <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
+                <ShieldCheck className="h-4 w-4 text-brand-yellow" />
+                {t("hero.badge2")}
+              </div>
+              <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-balance md:text-6xl">
+                {t("hero.title")}
+              </h1>
+              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80 md:text-base">
+                {t("hero.body2")}
+              </p>
+              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+                <HeroPoint
+                  icon={<ShoppingBasket className="h-4 w-4" />}
+                  text={t("hero.trust.stock")}
+                />
+                <HeroPoint icon={<Truck className="h-4 w-4" />} text={t("hero.trust.orders")} />
+                <HeroPoint
+                  icon={<CheckCircle2 className="h-4 w-4" />}
+                  text={t("hero.trust.staff")}
+                />
+              </div>
             </div>
-          </div>
 
-          <div className="mt-14 flex justify-start md:mt-16">
-            <div className="w-full max-w-2xl rounded-[1.5rem] border border-white/12 bg-[rgba(255,255,255,0.08)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
+            <div className="w-full rounded-[1.5rem] border border-white/12 bg-[rgba(255,255,255,0.08)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-yellow">
@@ -147,6 +164,11 @@ function HomePage() {
                   </p>
                 </div>
               </form>
+              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+                <HeroMetric label={t("home.trust1")} value="24/7" />
+                <HeroMetric label={t("home.trust2")} value="MoMo" />
+                <HeroMetric label={t("home.trust3")} value={selectedBranch} />
+              </div>
             </div>
           </div>
         </div>
@@ -183,6 +205,26 @@ function HomePage() {
       <section className="mx-auto max-w-7xl px-4 py-2">
         <BranchReviews branch={selectedBranch} />
       </section>
+    </div>
+  );
+}
+
+function HeroPoint({ icon, text }: { icon: React.ReactNode; text: string }) {
+  return (
+    <div className="rounded-2xl border border-white/12 bg-white/8 p-3 text-sm text-white/88 backdrop-blur-sm">
+      <div className="flex items-center gap-2 font-semibold">
+        <span className="text-brand-yellow">{icon}</span>
+        <span>{text}</span>
+      </div>
+    </div>
+  );
+}
+
+function HeroMetric({ label, value }: { label: string; value: string }) {
+  return (
+    <div className="rounded-2xl border border-white/10 bg-black/18 px-3 py-2">
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">{label}</div>
+      <div className="mt-1 text-sm font-extrabold text-white">{value}</div>
     </div>
   );
 }

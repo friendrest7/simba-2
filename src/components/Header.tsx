@@ -125,12 +125,14 @@ export function Header() {
               <option key={themeAccent.id} value={themeAccent.id}>
                 {t(`accent.${themeAccent.id}`)}
               </option>
-              ))}
-            </select>
+            ))}
+          </select>
           <select
-            aria-label="Currency"
+            aria-label={t("ui.currency")}
             value={currency}
-            onChange={(event) => setCurrency(event.target.value as (typeof CURRENCY_OPTIONS)[number]["code"])}
+            onChange={(event) =>
+              setCurrency(event.target.value as (typeof CURRENCY_OPTIONS)[number]["code"])
+            }
             className="h-10 rounded-xl border border-white/25 bg-background/95 px-3 text-sm font-semibold text-foreground"
           >
             {CURRENCY_OPTIONS.map((option) => (
@@ -232,12 +234,14 @@ export function Header() {
                 <option key={language.code} value={language.code}>
                   {language.flag}
                 </option>
-                ))}
+              ))}
             </select>
             <select
-              aria-label="Currency"
+              aria-label={t("ui.currency")}
               value={currency}
-              onChange={(event) => setCurrency(event.target.value as (typeof CURRENCY_OPTIONS)[number]["code"])}
+              onChange={(event) =>
+                setCurrency(event.target.value as (typeof CURRENCY_OPTIONS)[number]["code"])
+              }
               className="h-9 rounded-xl border border-white/25 bg-background/95 px-3 text-sm font-semibold text-foreground"
             >
               {CURRENCY_OPTIONS.map((option) => (

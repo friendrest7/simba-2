@@ -9,18 +9,23 @@ export type OrderStatus =
   | "pending"
   | "accepted"
   | "preparing"
+  | "ready"
   | "out-for-delivery"
   | "delivered"
-  | "cancelled";
+  | "rejected";
 
 export type PaymentMethod = "mobile-money" | "cash-on-delivery";
+
+export type PaymentStatus = "pending" | "processing" | "paid" | "cash-on-delivery" | "rejected";
 
 export type CheckoutOrderInput = {
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
+  deliveryNotes?: string;
   paymentMethod: PaymentMethod;
   momoNumber?: string;
+  paymentStatus?: PaymentStatus;
 };
 
 export type CustomerOrder = {
@@ -28,7 +33,9 @@ export type CustomerOrder = {
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
+  deliveryNotes?: string;
   paymentMethod: PaymentMethod;
+  paymentStatus: PaymentStatus;
   momoNumber?: string;
   status: OrderStatus;
   deliveryStatus: OrderStatus;
@@ -45,8 +52,8 @@ export type CustomerOrder = {
   }>;
 };
 
-const ORDERS_KEY = "simba.orders.v2";
-const LEGACY_ORDERS_KEY = "simba.orders.v1";
+const ORDERS_KEY = "simba.orders.v3";
+const LEGACY_ORDERS_KEYS = ["simba.orders.v2", "simba.orders.v1"];
 const STOCK_KEY = "simba.stock.v1";
 const LAST_ORDER_KEY = "simba.last-order.v1";
 const STORE_EVENT = "simba:store-updated";
@@ -84,19 +91,42 @@ const buildInitialStockMap = () =>
     }),
   ) as Record<number, number>;
 
-const normalizeStatus = (status: string | undefined): OrderStatus => {
+const normalizeOrderStatus = (status: string | undefined): OrderStatus => {
   switch (status) {
     case "accepted":
     case "preparing":
+    case "ready":
     case "out-for-delivery":
     case "delivered":
-    case "cancelled":
+    case "rejected":
       return status;
     case "confirmed":
       return "accepted";
+    case "cancelled":
+      return "rejected";
     default:
       return "pending";
   }
+};
+
+const normalizePaymentStatus = (
+  status: string | undefined,
+  method: PaymentMethod,
+): PaymentStatus => {
+  if (
+    status === "pending" ||
+    status === "processing" ||
+    status === "paid" ||
+    status === "rejected"
+  ) {
+    return status;
+  }
+
+  if (status === "cash-on-delivery") {
+    return "cash-on-delivery";
+  }
+
+  return method === "cash-on-delivery" ? "cash-on-delivery" : "paid";
 };
 
 const normalizeOrder = (order: Partial<CustomerOrder> & { id: string }): CustomerOrder => {
@@ -109,17 +139,21 @@ const normalizeOrder = (order: Partial<CustomerOrder> & { id: string }): Custome
         );
   const deliveryFee =
     typeof order.deliveryFee === "number" ? order.deliveryFee : getDeliveryFee(subtotal);
-  const status = normalizeStatus(order.status);
+  const paymentMethod =
+    order.paymentMethod === "cash-on-delivery" ? "cash-on-delivery" : "mobile-money";
+  const status = normalizeOrderStatus(order.status);
 
   return {
     id: order.id,
     customerName: order.customerName ?? "",
     phoneNumber: order.phoneNumber ?? "",
     deliveryLocation: order.deliveryLocation ?? "",
-    paymentMethod: order.paymentMethod === "cash-on-delivery" ? "cash-on-delivery" : "mobile-money",
+    deliveryNotes: order.deliveryNotes ?? "",
+    paymentMethod,
+    paymentStatus: normalizePaymentStatus(order.paymentStatus, paymentMethod),
     momoNumber: order.momoNumber,
     status,
-    deliveryStatus: normalizeStatus(order.deliveryStatus ?? order.status),
+    deliveryStatus: normalizeOrderStatus(order.deliveryStatus ?? order.status),
     subtotal,
     deliveryFee,
     total: typeof order.total === "number" ? order.total : subtotal + deliveryFee,
@@ -140,11 +174,13 @@ const readOrders = (): CustomerOrder[] => {
     return current.map(normalizeOrder);
   }
 
-  const legacy = safeRead<Array<Partial<CustomerOrder> & { id: string }>>(LEGACY_ORDERS_KEY, []);
-  if (legacy.length > 0) {
-    const migrated = legacy.map(normalizeOrder);
-    safeWrite(ORDERS_KEY, migrated);
-    return migrated;
+  for (const legacyKey of LEGACY_ORDERS_KEYS) {
+    const legacy = safeRead<Array<Partial<CustomerOrder> & { id: string }>>(legacyKey, []);
+    if (legacy.length > 0) {
+      const migrated = legacy.map(normalizeOrder);
+      safeWrite(ORDERS_KEY, migrated);
+      return migrated;
+    }
   }
 
   return [];
@@ -194,7 +230,7 @@ export const subscribeStore = (listener: () => void) => {
   const handleStorage = (event: StorageEvent) => {
     if (
       event.key === ORDERS_KEY ||
-      event.key === LEGACY_ORDERS_KEY ||
+      LEGACY_ORDERS_KEYS.includes(event.key ?? "") ||
       event.key === STOCK_KEY ||
       event.key === LAST_ORDER_KEY
     ) {
@@ -215,6 +251,9 @@ export const subscribeStore = (listener: () => void) => {
 export const formatOrderStatus = (status: OrderStatus, t: (key: string) => string) =>
   t(`order.status.${status}`);
 
+export const formatPaymentStatus = (status: PaymentStatus, t: (key: string) => string) =>
+  t(`order.payment.${status}`);
+
 export const getDeliveryStatusText = (status: OrderStatus, t: (key: string) => string) =>
   t(`order.delivery.${status}`);
 
@@ -234,12 +273,18 @@ export const placeOrder = (input: CheckoutOrderInput, items: CartLineInput[]) =>
 
   const subtotal = items.reduce((sum, item) => sum + item.product.price * item.qty, 0);
   const deliveryFee = getDeliveryFee(subtotal);
+  const paymentMethod = input.paymentMethod;
+  const paymentStatus =
+    input.paymentStatus ?? (paymentMethod === "cash-on-delivery" ? "cash-on-delivery" : "paid");
+
   const order: CustomerOrder = {
     id: `SIM-${Date.now().toString(36).toUpperCase()}`,
     customerName: input.customerName.trim(),
     phoneNumber: input.phoneNumber.trim(),
     deliveryLocation: input.deliveryLocation.trim(),
-    paymentMethod: input.paymentMethod,
+    deliveryNotes: input.deliveryNotes?.trim() || "",
+    paymentMethod,
+    paymentStatus,
     momoNumber: input.momoNumber?.trim() || undefined,
     status: "pending",
     deliveryStatus: "pending",
@@ -276,6 +321,20 @@ export const updateOrderStatus = (orderId: string, status: OrderStatus) => {
           ...order,
           status,
           deliveryStatus: status,
+          paymentStatus: status === "rejected" ? "rejected" : order.paymentStatus,
+        }
+      : order,
+  );
+  writeOrders(updatedOrders);
+  return updatedOrders.find((order) => order.id === orderId) ?? null;
+};
+
+export const updateOrderPaymentStatus = (orderId: string, paymentStatus: PaymentStatus) => {
+  const updatedOrders = getOrders().map((order) =>
+    order.id === orderId
+      ? {
+          ...order,
+          paymentStatus,
         }
       : order,
   );
@@ -285,7 +344,7 @@ export const updateOrderStatus = (orderId: string, status: OrderStatus) => {
 
 export const getRevenue = (orders: CustomerOrder[]) =>
   orders
-    .filter((order) => order.status !== "cancelled")
+    .filter((order) => order.status !== "rejected")
     .reduce((sum, order) => sum + order.total, 0);
 
 export const getOrderSummaryLines = (order: CustomerOrder) => [

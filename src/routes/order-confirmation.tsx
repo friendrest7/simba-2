@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import {
   formatOrderStatus,
+  formatPaymentStatus,
   getDeliveryStatusText,
   getLastOrder,
   getOrderById,
@@ -61,6 +62,10 @@ function OrderConfirmationPage() {
                 label={t("order.deliveryStatusLabel")}
                 value={getDeliveryStatusText(order.status, t)}
               />
+              <InfoCard
+                label={t("order.paymentStatusLabel")}
+                value={formatPaymentStatus(order.paymentStatus, t)}
+              />
               <InfoCard label={t("checkout.name")} value={order.customerName} />
               <InfoCard label={t("checkout.phone")} value={order.phoneNumber} />
               <InfoCard
@@ -71,6 +76,9 @@ function OrderConfirmationPage() {
                 label={t("ui.paymentMethod")}
                 value={t(`checkout.payment.${order.paymentMethod}`)}
               />
+              {order.deliveryNotes && (
+                <InfoCard label={t("checkout.deliveryNotes")} value={order.deliveryNotes} />
+              )}
               <InfoCard
                 label={t("dashboard.dateColumn")}
                 value={new Date(order.createdAt).toLocaleString()}
