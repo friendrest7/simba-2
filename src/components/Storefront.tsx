@@ -4,9 +4,17 @@ import { ArrowRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
+import { GrokAssistant } from "@/components/GrokAssistant";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
-import { CATEGORIES, PRODUCTS, categoryLabel, formatRWF, productDescription } from "@/lib/products";
+import {
+  CATEGORIES,
+  PRODUCTS,
+  categoryLabel,
+  formatRWF,
+  productDescription,
+  type Product,
+} from "@/lib/products";
 import type { ShopSearchParams } from "@/lib/shop-search";
 
 const PRICE_OPTIONS = [
@@ -41,7 +49,7 @@ export function Storefront({
   titleKey: string;
 }) {
   const { t } = useI18n();
-  const { stockOf } = useCart();
+  const { stockOf, selectedBranch } = useCart();
   const navigate = useNavigate();
   const [query, setQuery] = useState(search.q ?? "");
   const [showFilters, setShowFilters] = useState(false);
@@ -115,6 +123,7 @@ export function Storefront({
 
   const activePriceId =
     PRICE_OPTIONS.find((option) => option.min === minPrice && option.max === maxPrice)?.id ?? "all";
+  const assistantProducts = results.slice(0, 12) as Product[];
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -174,6 +183,16 @@ export function Storefront({
             />
           </div>
         </form>
+      </div>
+
+      <div className="mt-6">
+        <GrokAssistant
+          branch={selectedBranch}
+          candidates={assistantProducts.length ? assistantProducts : (PRODUCTS.slice(0, 12) as Product[])}
+          onUseSuggestedQuery={(nextQuery) =>
+            updateSearch({ q: nextQuery || undefined, cat: undefined, min: undefined, max: undefined })
+          }
+        />
       </div>
 
       <div className="mt-6 flex flex-col gap-3 rounded-[1.5rem] border border-border/70 bg-card/70 p-4 shadow-sm md:flex-row md:items-center md:justify-between">

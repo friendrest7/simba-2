@@ -72,24 +72,18 @@ function HomePage() {
       <section className="relative isolate overflow-hidden bg-[linear-gradient(120deg,#3d225f_0%,#5b347f_34%,#7b4f66_68%,#9c6a45_100%)] text-white">
         <div className="absolute inset-0 z-0">
           {heroSlides.map((slide, index) => (
-            <div
+            <img
               key={slide}
-              className={`absolute inset-0 flex items-center justify-center p-4 transition-opacity duration-1000 ${
+              src={slide}
+              alt=""
+              className={`absolute inset-0 h-full w-full object-cover transition-opacity duration-1000 ${
                 index === activeSlide ? "opacity-100" : "opacity-0"
               }`}
               aria-hidden="true"
-            >
-              <div className="flex h-full w-full items-center justify-center rounded-[2.25rem] border border-white/20 bg-[rgba(255,248,240,0.08)] p-4 shadow-[0_24px_80px_rgba(25,9,74,0.24)] backdrop-blur-[2px]">
-                <img
-                  src={slide}
-                  alt=""
-                  className="max-h-full max-w-full object-contain object-center"
-                />
-              </div>
-            </div>
+            />
           ))}
         </div>
-        <div className="absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(44,23,74,0.58)_0%,rgba(84,52,109,0.34)_36%,rgba(121,83,70,0.2)_100%),radial-gradient(circle_at_20%_30%,rgba(255,220,153,0.16),transparent_18%),linear-gradient(180deg,rgba(35,16,82,0.08),rgba(35,16,82,0.22))]" />
+        <div className="absolute inset-0 z-10 bg-[linear-gradient(to_right,rgba(0,0,0,0.7)_0%,rgba(0,0,0,0.3)_50%,rgba(0,0,0,0)_100%)]" />
         <div className="relative z-20 border-b border-white/12 bg-[rgba(52,32,73,0.72)] backdrop-blur-sm">
           <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
             {heroTabs.map((tab, index) => (
@@ -110,7 +104,6 @@ function HomePage() {
           <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
             <div className="max-w-3xl">
               <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
-                <img src={simbaLogo} alt="" className="h-5 w-5 rounded-full bg-white/90 object-contain" />
                 <ShieldCheck className="h-4 w-4 text-brand-yellow" />
                 {t("hero.badge2")}
               </div>
@@ -124,6 +117,19 @@ function HomePage() {
                 <p className="mt-4 max-w-2xl text-sm leading-7 text-white/82 md:text-base">
                   {t("hero.body2")}
                 </p>
+                <div className="mt-6 inline-flex items-center gap-4 rounded-[1.6rem] border border-white/14 bg-[rgba(255,248,240,0.08)] p-3 shadow-[0_20px_50px_rgba(25,9,74,0.16)] backdrop-blur-sm">
+                  <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-[1.25rem] bg-white/90 p-2">
+                    <img src={simbaLogo} alt="Simba logo" className="h-full w-full object-contain" />
+                  </div>
+                  <div className="min-w-0">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.18em] text-brand-yellow/95">
+                      Simba Supermarket
+                    </div>
+                    <div className="mt-1 text-sm leading-6 text-white/86">
+                      Clean grocery shopping, branch stock, and fast pickup in one place.
+                    </div>
+                  </div>
+                </div>
               </div>
               <div className="mt-14 grid gap-3 sm:grid-cols-3">
                 <HeroPoint

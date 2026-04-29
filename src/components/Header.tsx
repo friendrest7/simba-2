@@ -12,7 +12,7 @@ import { formatRWF } from "@/lib/products";
 import { cn } from "@/lib/utils";
 import { MapPin, Moon, Search, ShoppingBag, Sun, User as UserIcon } from "lucide-react";
 import { useState } from "react";
-import simbaLogo from "@/assets/simba-ref.png";
+import logoImage from "@/assets/logo1.png";
 
 export function Header() {
   const { theme, toggle, accent, setAccent } = useTheme();
@@ -68,7 +68,7 @@ export function Header() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 md:flex-nowrap md:gap-4">
         <Link to="/" className="flex shrink-0 items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-transparent p-1.5 shadow-md shadow-black/15">
-            <img src={simbaLogo} alt="Simba Supermarket" className="h-full w-full object-contain" />
+            <img src={logoImage} alt="Simba Supermarket" className="h-full w-full object-contain" />
           </div>
           <div className="hidden min-w-0 sm:block">
             <div className="text-base font-black tracking-tight text-primary-foreground">Simba</div>

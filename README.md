@@ -74,6 +74,14 @@ Supabase is optional. The demo does not depend on it for grading.
 3. Run `supabase/schema.sql`
 4. Optionally seed extra backend data with `npm run backend:seed`
 
+## Grok AI Assistant
+
+The product browsing pages can call Grok through the `/api/grok` serverless endpoint.
+
+- Set `XAI_API_KEY` in your deployment environment
+- The assistant falls back to local recommendations if the API is unavailable
+- The integration uses xAI's Responses API with the `grok-4.20` model
+
 ## Main Buyer and Staff Files
 
 - `src/routes/index.tsx`
