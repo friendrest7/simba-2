@@ -975,7 +975,7 @@ export const extraDictionaries: Record<Lang, Record<string, string>> = {
       "Ijambobanga ryawe ryahinduwe neza. Ongera winjire ukoresheje irishya.",
     "auth.backToSignIn": "Subira ku kwinjira",
     "hero.badge2": "Gutumiza grocery zo gufatira ku ishami muri Simba 2.0",
-    "hero.title": "Gura grocery urebe stock y'ishami mu gihe nyacyo.",
+    "hero.title": "Gura ibicuruzwa urebe ibihari kw'ishami mu gihe nyacyo.",
     "hero.body2":
       "Hitamo ishami, wemeze ko ibicuruzwa bihari mbere yo kwishyura, kandi utange itumiza riteguye gufatirwa ku ishami.",
     "hero.cta": "Tangira itumiza ryo gufatira ku ishami",

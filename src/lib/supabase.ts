@@ -14,7 +14,7 @@ export function hasSupabaseConfig() {
 function normalizeSiteUrl(value: string) {
   let url = value.trim();
   if (!url) {
-    return "http://localhost:5173/";
+    return "";
   }
   if (!url.startsWith("http://") && !url.startsWith("https://")) {
     url = `https://${url}`;
@@ -30,9 +30,16 @@ export function getPublicSiteUrl() {
   const fallbackUrl =
     import.meta.env.VITE_PUBLIC_SITE_URL ??
     import.meta.env.VITE_SITE_URL ??
-    "http://localhost:5173";
+    import.meta.env.VITE_VERCEL_PROJECT_PRODUCTION_URL ??
+    import.meta.env.VITE_VERCEL_URL ??
+    (import.meta.env.PROD ? "" : "http://localhost:5173");
 
-  return normalizeSiteUrl(fallbackUrl);
+  const normalizedFallbackUrl = normalizeSiteUrl(fallbackUrl);
+  if (normalizedFallbackUrl) {
+    return normalizedFallbackUrl;
+  }
+
+  return "http://localhost:5173/";
 }
 
 export function createBrowserRedirectUrl(

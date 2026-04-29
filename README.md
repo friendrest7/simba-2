@@ -56,6 +56,7 @@ npm run build
 - Deploy to Vercel, Netlify, or Cloudflare Pages as a static Vite app
 - No backend is required for grading because the local fallback is automatic
 - After deploy, the grader can log in immediately with the demo credentials above
+- If you use Supabase auth or password reset on Vercel, set `VITE_PUBLIC_SITE_URL` to your deployed app URL so email and OAuth redirects stay on the live host
 
 ## GitHub Submission Notes
 

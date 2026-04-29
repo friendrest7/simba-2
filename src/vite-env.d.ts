@@ -9,6 +9,8 @@ interface ImportMetaEnv {
   readonly VITE_ENABLE_PHONE_OTP?: string;
   readonly VITE_PUBLIC_SITE_URL?: string;
   readonly VITE_SITE_URL?: string;
+  readonly VITE_VERCEL_PROJECT_PRODUCTION_URL?: string;
+  readonly VITE_VERCEL_URL?: string;
   readonly VITE_FORCE_GOOGLE_IDENTITY?: string;
 }
 
