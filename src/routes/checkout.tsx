@@ -23,7 +23,7 @@ export const Route = createFileRoute("/checkout")({
   head: () => ({ meta: [{ title: "Checkout - Simba Supermarket" }] }),
 });
 
-type PaymentStage = "idle" | "processing" | "success";
+type PaymentStage = "idle" | "processing" | "success" | "failure";
 
 function CheckoutPage() {
   const { items, subtotal, deliveryFee, total, count, checkout, selectedBranch } = useCart();
@@ -87,6 +87,13 @@ function CheckoutPage() {
       setPaymentStatus("processing");
       await delay(1200);
       await delay(800);
+      if (shouldRejectMomoNumber(normalizedMomoNumber)) {
+        setSubmitting(false);
+        setPaymentStage("failure");
+        setPaymentStatus("pending");
+        setError(t("checkout.paymentFailed"));
+        return;
+      }
       setPaymentStage("success");
       setPaymentStatus("paid");
       nextPaymentStatus = "paid";
@@ -440,6 +447,15 @@ function PaymentStateCard({ stage }: { stage: PaymentStage }) {
     );
   }
 
+  if (stage === "failure") {
+    return (
+      <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
+        <div className="font-semibold">{t("checkout.paymentFailed")}</div>
+        <div className="mt-1 text-destructive/80">{t("checkout.paymentFailedHint")}</div>
+      </div>
+    );
+  }
+
   return (
     <div className="rounded-2xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
       <div className="flex items-center gap-2 font-semibold">
@@ -467,4 +483,9 @@ function isValidPhoneNumber(phoneNumber: string) {
 
 function delay(ms: number) {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
+}
+
+function shouldRejectMomoNumber(phoneNumber: string) {
+  const digitsOnly = phoneNumber.replace(/\D/g, "");
+  return digitsOnly.endsWith("000") || digitsOnly.endsWith("999");
 }

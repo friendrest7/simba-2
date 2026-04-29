@@ -22,6 +22,12 @@ export function Header() {
   const [q, setQ] = useState("");
   const navigate = useNavigate();
   const selectedBranchMapUrl = getBranchMapUrl(selectedBranch);
+  const dashboardRoute =
+    user?.role === "manager" || user?.role === "staff" ? "/dashboard" : "/client-dashboard";
+  const dashboardLabel =
+    user?.role === "manager" || user?.role === "staff"
+      ? t("nav.marketRepDashboard")
+      : t("client.dashboard");
   const signInRedirect =
     typeof window !== "undefined" ? `${window.location.pathname}${window.location.search}` : "/";
 
@@ -146,7 +152,7 @@ export function Header() {
             variant="outline"
             className="rounded-xl border-white/25 bg-background/95 text-primary hover:bg-background"
           >
-            <Link to="/dashboard">{t("nav.marketRepDashboard")}</Link>
+            <Link to={dashboardRoute}>{dashboardLabel}</Link>
           </Button>
         </div>
 
@@ -257,7 +263,7 @@ export function Header() {
             size="sm"
             className="rounded-xl border-white/25 bg-background/95 text-primary hover:bg-background"
           >
-            <Link to="/dashboard">{t("nav.marketRepDashboard")}</Link>
+            <Link to={dashboardRoute}>{dashboardLabel}</Link>
           </Button>
         </div>
       </div>

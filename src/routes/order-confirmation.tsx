@@ -2,6 +2,7 @@ import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { CheckCircle2, PackageCheck, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
 import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import {
@@ -22,6 +23,7 @@ export const Route = createFileRoute("/order-confirmation")({
 });
 
 function OrderConfirmationPage() {
+  const { user } = useAuth();
   const { t } = useI18n();
   const { orderId } = Route.useSearch();
   const order = (orderId ? getOrderById(orderId) : null) ?? getLastOrder();
@@ -133,7 +135,17 @@ function OrderConfirmationPage() {
                 <Link to="/products">{t("ui.continueShopping")}</Link>
               </Button>
               <Button asChild variant="outline" className="rounded-full">
-                <Link to="/dashboard">{t("nav.marketRepDashboard")}</Link>
+                <Link
+                  to={
+                    user?.role === "manager" || user?.role === "staff"
+                      ? "/dashboard"
+                      : "/client-dashboard"
+                  }
+                >
+                  {user?.role === "manager" || user?.role === "staff"
+                    ? t("nav.marketRepDashboard")
+                    : t("client.dashboard")}
+                </Link>
               </Button>
             </div>
           </aside>
