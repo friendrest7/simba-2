@@ -103,6 +103,7 @@ function CheckoutPage() {
     const result = await checkout({
       customerId: user?.id,
       customerEmail: user?.email,
+      branchName: selectedBranch,
       customerName: formData.customerName.trim(),
       phoneNumber: normalizedPhoneNumber,
       deliveryLocation: formData.deliveryLocation.trim(),
@@ -271,7 +272,10 @@ function CheckoutPage() {
             <div className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
               {t("checkout.reviewOrder")}
             </div>
-            <div className="mt-2 text-sm text-muted-foreground">{selectedBranch}</div>
+            <div className="mt-2 text-sm font-semibold text-foreground">
+              {t("dashboard.branchLabel")}: {selectedBranch}
+            </div>
+            <div className="mt-1 text-sm text-muted-foreground">{t("checkout.orderSummaryHint")}</div>
           </div>
           <div className="space-y-3">
             {items.map(({ product, qty }) => (

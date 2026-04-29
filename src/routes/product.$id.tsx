@@ -10,7 +10,7 @@ import {
   CATEGORIES,
 } from "@/lib/products";
 import { useCart } from "@/lib/cart";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { ProductCard } from "@/components/ProductCard";
 import {
   ChevronLeft,
@@ -36,7 +36,10 @@ export const Route = createFileRoute("/product/$id")({
       { title: `${loaderData?.product.name ?? "Product"} - Simba Supermarket` },
       {
         name: "description",
-        content: `Buy ${loaderData?.product.name} at Simba Supermarket Rwanda.`,
+        content:
+          loaderData?.product.name && getStoredLang()
+            ? `${translate(getStoredLang(), "ui.productDetails")}: ${loaderData.product.name}`
+            : translate(getStoredLang(), "ui.productDetails"),
       },
       { property: "og:image", content: loaderData?.product.image ?? "" },
     ],

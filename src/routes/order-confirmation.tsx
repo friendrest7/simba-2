@@ -78,6 +78,9 @@ function OrderConfirmationPage() {
                 label={t("ui.paymentMethod")}
                 value={t(`checkout.payment.${order.paymentMethod}`)}
               />
+              {order.branchName && (
+                <InfoCard label={t("dashboard.branchLabel")} value={order.branchName} />
+              )}
               {order.deliveryNotes && (
                 <InfoCard label={t("checkout.deliveryNotes")} value={order.deliveryNotes} />
               )}

@@ -1,5 +1,6 @@
 import { createFileRoute } from "@tanstack/react-router";
 import { Storefront } from "@/components/Storefront";
+import { getStoredLang, translate } from "@/lib/i18n";
 import { validateShopSearch } from "@/lib/shop-search";
 
 export const Route = createFileRoute("/shop")({
@@ -7,8 +8,8 @@ export const Route = createFileRoute("/shop")({
   validateSearch: validateShopSearch,
   head: () => ({
     meta: [
-      { title: "Shop - Simba Supermarket" },
-      { name: "description", content: "Browse and checkout groceries from Simba Supermarket." },
+      { title: `${translate(getStoredLang(), "nav.shop")} - Simba Supermarket` },
+      { name: "description", content: translate(getStoredLang(), "products.storefrontBody") },
     ],
   }),
 });

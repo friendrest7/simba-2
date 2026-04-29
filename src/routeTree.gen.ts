@@ -14,6 +14,7 @@ import { Route as ShopRouteImport } from './routes/shop'
 import { Route as ResetPasswordRouteImport } from './routes/reset-password'
 import { Route as ProductsRouteImport } from './routes/products'
 import { Route as OrderConfirmationRouteImport } from './routes/order-confirmation'
+import { Route as MarketRepRouteImport } from './routes/market-rep'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as ClientDashboardRouteImport } from './routes/client-dashboard'
 import { Route as CheckoutRouteImport } from './routes/checkout'
@@ -48,6 +49,11 @@ const ProductsRoute = ProductsRouteImport.update({
 const OrderConfirmationRoute = OrderConfirmationRouteImport.update({
   id: '/order-confirmation',
   path: '/order-confirmation',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const MarketRepRoute = MarketRepRouteImport.update({
+  id: '/market-rep',
+  path: '/market-rep',
   getParentRoute: () => rootRouteImport,
 } as any)
 const DashboardRoute = DashboardRouteImport.update({
@@ -110,6 +116,7 @@ export interface FileRoutesByFullPath {
   '/checkout': typeof CheckoutRoute
   '/client-dashboard': typeof ClientDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/market-rep': typeof MarketRepRoute
   '/order-confirmation': typeof OrderConfirmationRoute
   '/products': typeof ProductsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -127,6 +134,7 @@ export interface FileRoutesByTo {
   '/checkout': typeof CheckoutRoute
   '/client-dashboard': typeof ClientDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/market-rep': typeof MarketRepRoute
   '/order-confirmation': typeof OrderConfirmationRoute
   '/products': typeof ProductsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -145,6 +153,7 @@ export interface FileRoutesById {
   '/checkout': typeof CheckoutRoute
   '/client-dashboard': typeof ClientDashboardRoute
   '/dashboard': typeof DashboardRoute
+  '/market-rep': typeof MarketRepRoute
   '/order-confirmation': typeof OrderConfirmationRoute
   '/products': typeof ProductsRoute
   '/reset-password': typeof ResetPasswordRoute
@@ -164,6 +173,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/client-dashboard'
     | '/dashboard'
+    | '/market-rep'
     | '/order-confirmation'
     | '/products'
     | '/reset-password'
@@ -181,6 +191,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/client-dashboard'
     | '/dashboard'
+    | '/market-rep'
     | '/order-confirmation'
     | '/products'
     | '/reset-password'
@@ -198,6 +209,7 @@ export interface FileRouteTypes {
     | '/checkout'
     | '/client-dashboard'
     | '/dashboard'
+    | '/market-rep'
     | '/order-confirmation'
     | '/products'
     | '/reset-password'
@@ -216,6 +228,7 @@ export interface RootRouteChildren {
   CheckoutRoute: typeof CheckoutRoute
   ClientDashboardRoute: typeof ClientDashboardRoute
   DashboardRoute: typeof DashboardRoute
+  MarketRepRoute: typeof MarketRepRoute
   OrderConfirmationRoute: typeof OrderConfirmationRoute
   ProductsRoute: typeof ProductsRoute
   ResetPasswordRoute: typeof ResetPasswordRoute
@@ -260,6 +273,13 @@ declare module '@tanstack/react-router' {
       path: '/order-confirmation'
       fullPath: '/order-confirmation'
       preLoaderRoute: typeof OrderConfirmationRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/market-rep': {
+      id: '/market-rep'
+      path: '/market-rep'
+      fullPath: '/market-rep'
+      preLoaderRoute: typeof MarketRepRouteImport
       parentRoute: typeof rootRouteImport
     }
     '/dashboard': {
@@ -344,6 +364,7 @@ const rootRouteChildren: RootRouteChildren = {
   CheckoutRoute: CheckoutRoute,
   ClientDashboardRoute: ClientDashboardRoute,
   DashboardRoute: DashboardRoute,
+  MarketRepRoute: MarketRepRoute,
   OrderConfirmationRoute: OrderConfirmationRoute,
   ProductsRoute: ProductsRoute,
   ResetPasswordRoute: ResetPasswordRoute,

@@ -1,6 +1,7 @@
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { toast } from "sonner";
 import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
+import { getStoredLang, translate } from "@/lib/i18n";
 import type { Product } from "@/lib/products";
 import {
   getDeliveryFee,
@@ -101,14 +102,17 @@ export function CartProvider({ children }: { children: ReactNode }) {
       const existingQty = current.find((item) => item.product.id === product.id)?.qty ?? 0;
       const nextQty = existingQty + qty;
       const available = stockOf(product.id);
+      const lang = getStoredLang();
 
       if (available <= 0) {
-        toast.error(`${product.name} is out of stock.`);
+        toast.error(`${product.name}: ${translate(lang, "card.outOfStock")}.`);
         return current;
       }
 
       if (nextQty > available) {
-        toast.error(`Only ${available} left for ${product.name}.`);
+        toast.error(
+          `${product.name}: ${translate(lang, "cart.availableStock").replace("{stock}", String(available))}.`,
+        );
         return current;
       }
 
@@ -135,7 +139,8 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     const available = stockOf(productId);
     if (qty > available) {
-      toast.error(`Only ${available} left for this product.`);
+      const lang = getStoredLang();
+      toast.error(translate(lang, "cart.availableStock").replace("{stock}", String(available)));
       return;
     }
 

@@ -37,19 +37,19 @@ type I18nCtx = {
 const Ctx = createContext<I18nCtx | null>(null);
 
 function normalizeLang(value: string | null | undefined): Lang {
-  return value === "fr" || value === "rw" || value === "sw" || value === "tr" ? value : "en";
+  return value === "fr" || value === "rw" || value === "sw" || value === "tr" ? value : "rw";
 }
 
 export function getStoredLang(): Lang {
   if (typeof window === "undefined") {
-    return "en";
+    return "rw";
   }
 
   return normalizeLang(window.localStorage.getItem("simba.lang"));
 }
 
 export function I18nProvider({ children }: { children: ReactNode }) {
-  const [lang, setLangState] = useState<Lang>("en");
+  const [lang, setLangState] = useState<Lang>("rw");
 
   useEffect(() => {
     if (typeof window === "undefined") return;

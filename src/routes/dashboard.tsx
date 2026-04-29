@@ -14,7 +14,6 @@ import { Input } from "@/components/ui/input";
 import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
 import {
-  formatOrderStatus,
   formatPaymentStatus,
   getDeliveryStatusText,
   getOrders,
@@ -33,6 +32,15 @@ const STATUS_OPTIONS: OrderStatus[] = [
   "out-for-delivery",
   "delivered",
   "rejected",
+];
+
+const DASHBOARD_ACTIONS: Array<{ label: string; status: OrderStatus }> = [
+  { label: "Pending", status: "pending" },
+  { label: "Confirmed", status: "accepted" },
+  { label: "Packed", status: "ready" },
+  { label: "Out for Delivery", status: "out-for-delivery" },
+  { label: "Delivered", status: "delivered" },
+  { label: "Cancelled", status: "rejected" },
 ];
 
 export const Route = createFileRoute("/dashboard")({
@@ -59,6 +67,7 @@ function DashboardPage() {
       const matchesStatus = statusFilter === "all" || order.status === statusFilter;
       const haystack = [
         order.id,
+        order.branchName,
         order.customerName,
         order.phoneNumber,
         order.deliveryLocation,
@@ -74,7 +83,7 @@ function DashboardPage() {
   const stats = {
     total: orders.length,
     pending: orders.filter((order) => order.status === "pending").length,
-    accepted: orders.filter((order) =>
+    confirmed: orders.filter((order) =>
       ["accepted", "preparing", "ready", "out-for-delivery"].includes(order.status),
     ).length,
     delivered: orders.filter((order) => order.status === "delivered").length,
@@ -102,13 +111,13 @@ function DashboardPage() {
                 {t("dashboard.demoBackend")}
               </div>
               <Button asChild variant="outline" className="rounded-full">
-                <Link to="/products">{t("dashboard.backToShop")}</Link>
+                <Link to="/shop">{t("dashboard.backToShop")}</Link>
               </Button>
             </div>
           </div>
         </section>
 
-        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-5">
+        <section className="mt-6 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <StatCard
             icon={<ClipboardList className="h-4 w-4" />}
             label={t("dashboard.totalOrders")}
@@ -122,12 +131,7 @@ function DashboardPage() {
           <StatCard
             icon={<CheckCircle2 className="h-4 w-4" />}
             label={t("dashboard.confirmedOrders")}
-            value={String(stats.accepted)}
-          />
-          <StatCard
-            icon={<Truck className="h-4 w-4" />}
-            label={t("order.status.delivered")}
-            value={String(stats.delivered)}
+            value={String(stats.confirmed)}
           />
           <StatCard
             icon={<BadgeDollarSign className="h-4 w-4" />}
@@ -163,7 +167,7 @@ function DashboardPage() {
                 <option value="all">{t("dashboard.filter.all")}</option>
                 {STATUS_OPTIONS.map((status) => (
                   <option key={status} value={status}>
-                    {formatOrderStatus(status, t)}
+                    {formatDashboardStatus(status, t)}
                   </option>
                 ))}
               </select>
@@ -190,7 +194,7 @@ function DashboardPage() {
                   order={order}
                   onStatusChange={(nextStatus) =>
                     setStatusMessage(
-                      `${t("dashboard.statusUpdated")}: ${order.id} - ${formatOrderStatus(nextStatus, t)}`,
+                      `${t("dashboard.statusUpdated")}: ${order.id} - ${formatDashboardStatus(nextStatus, t)}`,
                     )
                   }
                 />
@@ -211,6 +215,7 @@ function OrderCard({
   onStatusChange: (status: OrderStatus) => void;
 }) {
   const { t } = useI18n();
+
   const handleStatusChange = (nextStatus: OrderStatus) => {
     const updated = updateOrderStatus(order.id, nextStatus);
     if (updated) {
@@ -230,7 +235,12 @@ function OrderCard({
           <Info
             label={t("dashboard.customerColumn")}
             value={order.customerName}
-            detail={`${order.phoneNumber} • ${order.deliveryLocation}`}
+            detail={`${order.phoneNumber} | ${order.deliveryLocation}`}
+          />
+          <Info
+            label={t("dashboard.branchLabel")}
+            value={order.branchName || "Remera"}
+            detail={t("dashboard.locationLabel")}
           />
           <Info
             label={t("dashboard.paymentColumn")}
@@ -240,7 +250,11 @@ function OrderCard({
           <Info
             label={t("dashboard.totalColumn")}
             value={formatRWF(order.total)}
-            detail={getDeliveryStatusText(order.status, t)}
+            detail={formatDashboardStatus(order.status, t)}
+          />
+          <Info
+            label={t("dashboard.deliveryStatusColumn")}
+            value={getDeliveryStatusText(order.status, t)}
           />
         </div>
         <div className="flex flex-wrap gap-2">
@@ -280,40 +294,18 @@ function OrderCard({
 
         <div className="rounded-2xl border border-border bg-card p-4">
           <div className="text-xs font-bold uppercase tracking-[0.14em] text-primary">
-            {t("dashboard.actions")}
+            {t("dashboard.quickActions")}
           </div>
           <div className="mt-3 space-y-2">
-            <ActionButton
-              label={t("dashboard.acceptOrder")}
-              onClick={() => handleStatusChange("accepted")}
-              disabled={order.status === "accepted"}
-            />
-            <ActionButton
-              label={t("dashboard.rejectOrder")}
-              onClick={() => handleStatusChange("rejected")}
-              disabled={order.status === "rejected"}
-              tone="danger"
-            />
-            <ActionButton
-              label={t("dashboard.markPreparing")}
-              onClick={() => handleStatusChange("preparing")}
-              disabled={order.status === "preparing"}
-            />
-            <ActionButton
-              label={t("dashboard.markReady")}
-              onClick={() => handleStatusChange("ready")}
-              disabled={order.status === "ready"}
-            />
-            <ActionButton
-              label={t("dashboard.markOutForDelivery")}
-              onClick={() => handleStatusChange("out-for-delivery")}
-              disabled={order.status === "out-for-delivery"}
-            />
-            <ActionButton
-              label={t("dashboard.markDelivered")}
-              onClick={() => handleStatusChange("delivered")}
-              disabled={order.status === "delivered"}
-            />
+            {DASHBOARD_ACTIONS.map((action) => (
+              <ActionButton
+                key={action.label}
+                label={action.label}
+                onClick={() => handleStatusChange(action.status)}
+                disabled={order.status === action.status}
+                tone={action.status === "rejected" ? "danger" : "default"}
+              />
+            ))}
           </div>
         </div>
       </div>
@@ -359,7 +351,7 @@ function StatusBadge({ status }: { status: OrderStatus }) {
 
   return (
     <span className={`inline-flex rounded-full px-3 py-1 text-xs font-bold ${tone}`}>
-      {formatOrderStatus(status, t)}
+      {formatDashboardStatus(status, t)}
     </span>
   );
 }
@@ -400,4 +392,23 @@ function Info({ label, value, detail }: { label: string; value: string; detail?:
       {detail && <div className="mt-1 text-sm text-muted-foreground">{detail}</div>}
     </div>
   );
+}
+
+function formatDashboardStatus(status: OrderStatus, t: (key: string) => string) {
+  switch (status) {
+    case "accepted":
+      return "Confirmed";
+    case "preparing":
+    case "ready":
+      return "Packed";
+    case "out-for-delivery":
+      return "Out for Delivery";
+    case "delivered":
+      return "Delivered";
+    case "rejected":
+      return "Cancelled";
+    case "pending":
+    default:
+      return "Pending";
+  }
 }

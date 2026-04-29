@@ -21,6 +21,7 @@ export type PaymentStatus = "pending" | "processing" | "paid" | "cash-on-deliver
 export type CheckoutOrderInput = {
   customerId?: string;
   customerEmail?: string;
+  branchName?: string;
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
@@ -34,6 +35,7 @@ export type CustomerOrder = {
   id: string;
   customerId?: string;
   customerEmail?: string;
+  branchName?: string;
   customerName: string;
   phoneNumber: string;
   deliveryLocation: string;
@@ -130,6 +132,7 @@ const createSeedOrders = (): CustomerOrder[] => {
       id: "SIM-DEMO-1001",
       customerId: "buyer-test-default",
       customerEmail: "buyer@test.com",
+      branchName: "Remera",
       customerName: "Simba Buyer",
       phoneNumber: "0788123456",
       deliveryLocation: "Kimironko, KG 11 Ave, House 24",
@@ -150,6 +153,7 @@ const createSeedOrders = (): CustomerOrder[] => {
       id: "SIM-DEMO-1002",
       customerId: "buyer-test-default",
       customerEmail: "buyer@test.com",
+      branchName: "Kimironko",
       customerName: "Aline Mukamana",
       phoneNumber: "0788456123",
       deliveryLocation: "Remera, KG 9 Ave, Apartment 4",
@@ -167,6 +171,7 @@ const createSeedOrders = (): CustomerOrder[] => {
     withTotals({
       id: "SIM-DEMO-1003",
       customerEmail: "jeanne@test.com",
+      branchName: "Kacyiru",
       customerName: "Jeanne Uwera",
       phoneNumber: "0788991001",
       deliveryLocation: "Kacyiru, near Kigali Heights",
@@ -241,6 +246,7 @@ const normalizeOrder = (order: Partial<CustomerOrder> & { id: string }): Custome
     id: order.id,
     customerId: order.customerId,
     customerEmail: order.customerEmail,
+    branchName: order.branchName ?? "",
     customerName: order.customerName ?? "",
     phoneNumber: order.phoneNumber ?? "",
     deliveryLocation: order.deliveryLocation ?? "",
@@ -397,6 +403,7 @@ export const placeOrder = (input: CheckoutOrderInput, items: CartLineInput[]) =>
     id: `SIM-${Date.now().toString(36).toUpperCase()}`,
     customerId: input.customerId?.trim() || undefined,
     customerEmail: input.customerEmail?.trim().toLowerCase() || undefined,
+    branchName: input.branchName?.trim() || undefined,
     customerName: input.customerName.trim(),
     phoneNumber: input.phoneNumber.trim(),
     deliveryLocation: input.deliveryLocation.trim(),

@@ -6,7 +6,7 @@ import { Textarea } from "@/components/ui/textarea";
 import { ProductCard } from "@/components/ProductCard";
 import { BranchReviews } from "@/components/BranchReviews";
 import { useCart } from "@/lib/cart";
-import { useI18n } from "@/lib/i18n";
+import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
 import { searchProducts } from "@/lib/products";
 
@@ -14,11 +14,10 @@ export const Route = createFileRoute("/")({
   component: HomePage,
   head: () => ({
     meta: [
-      { title: "Simba Supermarket - Pickup-first grocery demo" },
+      { title: translate(getStoredLang(), "meta.siteTitle") },
       {
         name: "description",
-        content:
-          "Simba 2.0 is a pickup-first supermarket demo with branch-aware stock, checkout, dashboards, and multilingual support.",
+        content: translate(getStoredLang(), "meta.siteDescription"),
       },
     ],
   }),
@@ -74,6 +73,9 @@ function HomePage() {
         <div className="relative mx-auto flex min-h-[52vh] max-w-7xl flex-col justify-center px-4 py-8 md:min-h-[56vh] md:py-10">
           <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
             <div className="max-w-3xl">
+              <div className="text-sm font-bold uppercase tracking-[0.24em] text-brand-yellow/90">
+                {t("hero.welcome")}
+              </div>
               <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
                 <ShieldCheck className="h-4 w-4 text-brand-yellow" />
                 {t("hero.badge2")}
