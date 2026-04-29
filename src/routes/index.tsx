@@ -1,6 +1,6 @@
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useMemo, useRef, useState, type FormEvent } from "react";
-import { ArrowRight, CheckCircle2, ShieldCheck, ShoppingBasket, Store, Truck } from "lucide-react";
+import { useEffect, useMemo, useState, type FormEvent } from "react";
+import { ArrowRight, CheckCircle2, ShieldCheck, ShoppingBasket, Truck } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Textarea } from "@/components/ui/textarea";
 import { ProductCard } from "@/components/ProductCard";
@@ -9,6 +9,11 @@ import { useCart } from "@/lib/cart";
 import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
 import { searchProducts } from "@/lib/products";
+import simbaLogo from "@/assets/simba-ref.png";
+import heroPhoto1 from "../../1.jpg";
+import heroPhoto2 from "../../2.jpg";
+import heroPhoto3 from "../../3.jpg";
+import heroPhoto4 from "../../4.jpg";
 
 export const Route = createFileRoute("/")({
   component: HomePage,
@@ -27,9 +32,9 @@ function HomePage() {
   const { t } = useI18n();
   const { selectedBranch, setSelectedBranch } = useCart();
   const navigate = useNavigate();
-  const heroVideoRef = useRef<HTMLVideoElement | null>(null);
   const [q, setQ] = useState("");
   const [draftPrompt, setDraftPrompt] = useState("");
+  const [activeSlide, setActiveSlide] = useState(0);
 
   const featuredResults = useMemo(
     () => searchProducts(q || t("landing.defaultSearch")).slice(0, 10),
@@ -39,11 +44,20 @@ function HomePage() {
     .split("|")
     .map((item) => item.trim())
     .filter(Boolean);
+  const heroTabs = [
+    t("nav.shop"),
+    t("hero.trust.stock"),
+    t("hero.trust.orders"),
+    t("hero.trust.staff"),
+  ];
+  const heroSlides = [heroPhoto1, heroPhoto2, heroPhoto3, heroPhoto4];
 
   useEffect(() => {
-    if (heroVideoRef.current) {
-      heroVideoRef.current.playbackRate = 0.55;
-    }
+    const intervalId = window.setInterval(() => {
+      setActiveSlide((current) => (current + 1) % heroSlides.length);
+    }, 3500);
+
+    return () => window.clearInterval(intervalId);
   }, []);
 
   const submitPrompt = (event: FormEvent<HTMLFormElement>) => {
@@ -55,38 +69,63 @@ function HomePage() {
 
   return (
     <div>
-      <section className="relative min-h-[52vh] overflow-hidden bg-[#071711] text-white md:min-h-[56vh]">
-        <video
-          ref={heroVideoRef}
-          className="absolute inset-0 h-full w-full object-cover object-center opacity-80"
-          autoPlay
-          muted
-          defaultMuted
-          loop
-          playsInline
-          preload="metadata"
-          aria-hidden="true"
-        >
-          <source src="/simba.mp4" type="video/mp4" />
-        </video>
-        <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(7,23,17,0.48)_0%,rgba(7,23,17,0.2)_42%,rgba(7,23,17,0.08)_100%),radial-gradient(circle_at_top_right,rgba(255,184,77,0.1),transparent_22%)]" />
-        <div className="relative mx-auto flex min-h-[52vh] max-w-7xl flex-col justify-center px-4 py-8 md:min-h-[56vh] md:py-10">
-          <div className="grid gap-10 lg:grid-cols-[1.05fr_0.95fr] lg:items-end">
-            <div className="max-w-3xl">
-              <div className="text-sm font-bold uppercase tracking-[0.24em] text-brand-yellow/90">
-                {t("hero.welcome")}
+      <section className="relative isolate overflow-hidden bg-[linear-gradient(120deg,#3d225f_0%,#5b347f_34%,#7b4f66_68%,#9c6a45_100%)] text-white">
+        <div className="absolute inset-0 z-0">
+          {heroSlides.map((slide, index) => (
+            <div
+              key={slide}
+              className={`absolute inset-0 flex items-center justify-center p-4 transition-opacity duration-1000 ${
+                index === activeSlide ? "opacity-100" : "opacity-0"
+              }`}
+              aria-hidden="true"
+            >
+              <div className="flex h-full w-full items-center justify-center rounded-[2.25rem] border border-white/20 bg-[rgba(255,248,240,0.08)] p-4 shadow-[0_24px_80px_rgba(25,9,74,0.24)] backdrop-blur-[2px]">
+                <img
+                  src={slide}
+                  alt=""
+                  className="max-h-full max-w-full object-contain object-center"
+                />
               </div>
-              <div className="inline-flex items-center gap-2 rounded-full border border-white/12 bg-white/8 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 z-10 bg-[linear-gradient(90deg,rgba(44,23,74,0.58)_0%,rgba(84,52,109,0.34)_36%,rgba(121,83,70,0.2)_100%),radial-gradient(circle_at_20%_30%,rgba(255,220,153,0.16),transparent_18%),linear-gradient(180deg,rgba(35,16,82,0.08),rgba(35,16,82,0.22))]" />
+        <div className="relative z-20 border-b border-white/12 bg-[rgba(52,32,73,0.72)] backdrop-blur-sm">
+          <div className="mx-auto flex max-w-7xl gap-2 overflow-x-auto px-4 py-3 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {heroTabs.map((tab, index) => (
+              <div
+                key={tab}
+                className={`rounded-t-2xl px-5 py-3 text-sm font-extrabold whitespace-nowrap transition ${
+                  index === 0
+                    ? "bg-[rgba(255,255,255,0.08)] text-brand-yellow shadow-[inset_0_-2px_0_rgba(255,210,65,0.35)]"
+                    : "text-white/80"
+                }`}
+              >
+                {tab}
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="relative z-20 mx-auto max-w-7xl px-4 py-10 md:py-14">
+          <div className="grid items-center gap-10 lg:grid-cols-[1.1fr_0.9fr] lg:gap-12">
+            <div className="max-w-3xl">
+              <div className="inline-flex items-center gap-2 rounded-full border border-white/16 bg-white/10 px-4 py-2 text-xs font-bold uppercase tracking-[0.18em] backdrop-blur-sm">
+                <img src={simbaLogo} alt="" className="h-5 w-5 rounded-full bg-white/90 object-contain" />
                 <ShieldCheck className="h-4 w-4 text-brand-yellow" />
                 {t("hero.badge2")}
               </div>
-              <h1 className="mt-5 max-w-3xl text-4xl font-black tracking-tight text-balance md:text-6xl">
-                {t("hero.title")}
-              </h1>
-              <p className="mt-4 max-w-2xl text-sm leading-7 text-white/80 md:text-base">
-                {t("hero.body2")}
-              </p>
-              <div className="mt-6 grid gap-3 sm:grid-cols-3">
+              <div className="mt-8">
+                <div className="text-sm font-bold uppercase tracking-[0.24em] text-brand-yellow/95">
+                  {t("hero.welcome")}
+                </div>
+                <h1 className="mt-4 max-w-3xl text-4xl font-black tracking-tight text-balance md:text-6xl">
+                  {t("hero.title")}
+                </h1>
+                <p className="mt-4 max-w-2xl text-sm leading-7 text-white/82 md:text-base">
+                  {t("hero.body2")}
+                </p>
+              </div>
+              <div className="mt-14 grid gap-3 sm:grid-cols-3">
                 <HeroPoint
                   icon={<ShoppingBasket className="h-4 w-4" />}
                   text={t("hero.trust.stock")}
@@ -97,76 +136,88 @@ function HomePage() {
                   text={t("hero.trust.staff")}
                 />
               </div>
+              <div className="mt-6 flex gap-2">
+                {heroSlides.map((slide, index) => (
+                  <span
+                    key={`dot-${slide}`}
+                    className={`h-1.5 rounded-full transition-all duration-500 ${
+                      index === activeSlide ? "w-10 bg-brand-yellow" : "w-4 bg-white/30"
+                    }`}
+                    aria-hidden="true"
+                  />
+                ))}
+              </div>
             </div>
 
-            <div className="w-full rounded-[1.5rem] border border-white/12 bg-[rgba(255,255,255,0.08)] p-3 shadow-[0_20px_60px_rgba(0,0,0,0.24)] backdrop-blur-xl">
-              <div className="flex items-center justify-between gap-4">
-                <div>
-                  <div className="text-xs font-bold uppercase tracking-[0.18em] text-brand-yellow">
-                    {t("landing.panelLabel")}
-                  </div>
-                </div>
-                <div className="flex h-9 w-9 items-center justify-center rounded-xl bg-white/10">
-                  <Store className="h-4 w-4 text-brand-yellow" />
-                </div>
+            <div className="rounded-[2rem] bg-white p-4 text-foreground shadow-[0_28px_80px_rgba(25,9,74,0.28)] md:p-7">
+              <div className="text-center text-3xl font-black tracking-tight text-primary">
+                {t("landing.panelLabel")}
               </div>
+              <p className="mt-2 text-center text-sm font-bold text-foreground">
+                {t("landing.panelTitle")}
+              </p>
+              <form className="mt-6 grid gap-4" onSubmit={submitPrompt}>
+                <div className="grid gap-3 md:grid-cols-[170px_1fr]">
+                  <div className="rounded-2xl border-2 border-border bg-card px-4 py-3">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+                      {t("header.chooseBranch")}
+                    </div>
+                    <select
+                      value={selectedBranch}
+                      onChange={(e) => setSelectedBranch(e.target.value as BranchName)}
+                      className="mt-2 h-10 w-full rounded-xl border-0 bg-transparent px-0 text-base font-semibold text-foreground shadow-none focus:outline-none"
+                    >
+                      {PICKUP_BRANCHES.map((branch) => (
+                        <option key={branch} value={branch}>
+                          {branch}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
-              <form
-                className="mt-3 grid gap-2.5 lg:grid-cols-[1.5fr_0.85fr] lg:items-start"
-                onSubmit={submitPrompt}
-              >
-                <div className="grid gap-3">
-                  <Textarea
-                    value={draftPrompt}
-                    onChange={(e) => setDraftPrompt(e.target.value)}
-                    onKeyDown={(e) => {
-                      if (e.key === "Enter" && !e.shiftKey) {
-                        e.preventDefault();
-                        e.currentTarget.form?.requestSubmit();
-                      }
-                    }}
-                    placeholder={t("landing.placeholder")}
-                    rows={2}
-                    className="min-h-[58px] rounded-[1.1rem] border-0 bg-white px-3.5 py-2.5 text-sm text-black shadow-none placeholder:text-black/45 focus-visible:ring-2 focus-visible:ring-brand-yellow/60"
-                  />
-                  <div className="flex flex-wrap gap-1.5">
-                    {promptSuggestions.map((suggestion) => (
-                      <button
-                        key={suggestion}
-                        type="button"
-                        onClick={() => setDraftPrompt(suggestion)}
-                        className="rounded-full border border-white/12 bg-white/8 px-2.5 py-1 text-[11px] font-semibold text-white/85 transition hover:bg-white/14"
-                      >
-                        {suggestion}
-                      </button>
-                    ))}
+                  <div className="rounded-2xl border-2 border-primary/35 bg-card px-4 py-3">
+                    <div className="text-[11px] font-bold uppercase tracking-[0.16em] text-primary/72">
+                      {t("landing.label")}
+                    </div>
+                    <Textarea
+                      value={draftPrompt}
+                      onChange={(e) => setDraftPrompt(e.target.value)}
+                      onKeyDown={(e) => {
+                        if (e.key === "Enter" && !e.shiftKey) {
+                          e.preventDefault();
+                          e.currentTarget.form?.requestSubmit();
+                        }
+                      }}
+                      placeholder={t("landing.placeholder")}
+                      rows={2}
+                      className="mt-2 min-h-[72px] resize-none border-0 bg-transparent px-0 py-0 text-base text-foreground shadow-none placeholder:text-muted-foreground focus-visible:ring-0"
+                    />
                   </div>
                 </div>
-                <div className="grid gap-3 lg:self-stretch">
-                  <select
-                    value={selectedBranch}
-                    onChange={(e) => setSelectedBranch(e.target.value as BranchName)}
-                    className="h-10 rounded-xl border border-white/15 bg-white/10 px-3 text-xs font-semibold text-white"
-                  >
-                    {PICKUP_BRANCHES.map((branch) => (
-                      <option key={branch} value={branch} className="text-black">
-                        {branch}
-                      </option>
-                    ))}
-                  </select>
-                  <Button
-                    type="submit"
-                    className="h-10 rounded-xl bg-brand-yellow px-4 text-xs font-extrabold text-black shadow-lg shadow-black/20 hover:bg-brand-yellow/90"
-                  >
-                    {t("landing.startShopping")}
-                    <ArrowRight className="ml-2 h-4 w-4" />
-                  </Button>
-                  <p className="text-[11px] leading-5 text-white/72 lg:pt-0.5">
-                    {t("landing.panelTitle")}
-                  </p>
+
+                <div className="flex flex-wrap gap-2">
+                  {promptSuggestions.map((suggestion) => (
+                    <button
+                      key={suggestion}
+                      type="button"
+                      onClick={() => setDraftPrompt(suggestion)}
+                      className="rounded-full bg-secondary px-3 py-1.5 text-xs font-bold text-secondary-foreground transition hover:bg-secondary/80"
+                    >
+                      {suggestion}
+                    </button>
+                  ))}
                 </div>
+
+                <Button
+                  type="submit"
+                  className="h-12 rounded-2xl bg-brand-yellow text-base font-black text-black shadow-[0_14px_30px_rgba(255,202,15,0.28)] hover:bg-brand-yellow/92"
+                >
+                  {t("landing.startShopping")}
+                  <ArrowRight className="ml-2 h-5 w-5" />
+                </Button>
               </form>
-              <div className="mt-3 grid gap-2 sm:grid-cols-3">
+
+              <div className="mt-5 grid gap-3 sm:grid-cols-3">
                 <HeroMetric label={t("home.trust1")} value="24/7" />
                 <HeroMetric label={t("home.trust2")} value="MoMo" />
                 <HeroMetric label={t("home.trust3")} value={selectedBranch} />
@@ -213,7 +264,7 @@ function HomePage() {
 
 function HeroPoint({ icon, text }: { icon: React.ReactNode; text: string }) {
   return (
-    <div className="rounded-2xl border border-white/12 bg-white/8 p-3 text-sm text-white/88 backdrop-blur-sm">
+    <div className="rounded-2xl border border-white/12 bg-[rgba(255,248,240,0.08)] p-3 text-sm text-white/90 backdrop-blur-sm">
       <div className="flex items-center gap-2 font-semibold">
         <span className="text-brand-yellow">{icon}</span>
         <span>{text}</span>
@@ -224,9 +275,11 @@ function HeroPoint({ icon, text }: { icon: React.ReactNode; text: string }) {
 
 function HeroMetric({ label, value }: { label: string; value: string }) {
   return (
-    <div className="rounded-2xl border border-white/10 bg-black/18 px-3 py-2">
-      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-white/60">{label}</div>
-      <div className="mt-1 text-sm font-extrabold text-white">{value}</div>
+    <div className="rounded-2xl border border-border bg-secondary px-3 py-3">
+      <div className="text-[10px] font-bold uppercase tracking-[0.16em] text-muted-foreground">
+        {label}
+      </div>
+      <div className="mt-1 text-sm font-extrabold text-foreground">{value}</div>
     </div>
   );
 }

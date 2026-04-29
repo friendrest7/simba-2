@@ -9,9 +9,10 @@ import { useAuth } from "@/lib/auth";
 import { PICKUP_BRANCHES, type BranchName } from "@/lib/demo-store";
 import { getBranchMapUrl } from "@/lib/branchLocations";
 import { formatRWF } from "@/lib/products";
+import { cn } from "@/lib/utils";
 import { MapPin, Moon, Search, ShoppingBag, Sun, User as UserIcon } from "lucide-react";
 import { useState } from "react";
-import logoImage from "@/assets/logo1.png";
+import simbaLogo from "@/assets/simba-ref.png";
 
 export function Header() {
   const { theme, toggle, accent, setAccent } = useTheme();
@@ -39,6 +40,21 @@ export function Header() {
     user?.role === "manager" || user?.role === "staff"
       ? undefined
       : ({ redirect: "/dashboard", intent: "admin" } as never);
+  const primaryNavItems = [
+    { to: "/" as const, label: t("nav.home") },
+    { to: "/products" as const, label: t("nav.shop") },
+    { to: "/cart" as const, label: t("nav.cart") },
+    { to: "/checkout" as const, label: t("nav.checkout") },
+    { to: ordersRoute, label: t("nav.orders"), search: ordersSearch },
+  ];
+  const accountNavItems = [
+    {
+      to: user ? dashboardRoute : "/signin",
+      label: user ? dashboardLabel : t("nav.signin"),
+      search: user ? undefined : ({ redirect: signInRedirect, intent: "client" } as never),
+    },
+    { to: adminRoute, label: t("nav.marketRepDashboard"), search: adminSearch },
+  ];
 
   const submit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -52,7 +68,7 @@ export function Header() {
       <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-3 px-4 py-3 md:flex-nowrap md:gap-4">
         <Link to="/" className="flex shrink-0 items-center gap-3">
           <div className="flex h-11 w-11 items-center justify-center overflow-hidden rounded-2xl border border-white/15 bg-transparent p-1.5 shadow-md shadow-black/15">
-            <img src={logoImage} alt="Simba" className="h-full w-full object-contain" />
+            <img src={simbaLogo} alt="Simba Supermarket" className="h-full w-full object-contain" />
           </div>
           <div className="hidden min-w-0 sm:block">
             <div className="text-base font-black tracking-tight text-primary-foreground">Simba</div>
@@ -156,13 +172,6 @@ export function Header() {
               </option>
             ))}
           </select>
-          <Button
-            asChild
-            variant="outline"
-            className="rounded-xl border-white/25 bg-background/95 text-primary hover:bg-background"
-          >
-            <Link to={dashboardRoute}>{dashboardLabel}</Link>
-          </Button>
         </div>
 
         {user ? (
@@ -220,41 +229,38 @@ export function Header() {
             aria-label={t("ui.primaryNavigation")}
             className="flex gap-2 overflow-x-auto pb-1 [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden"
           >
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to="/products">{t("nav.shop")}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to="/cart">{t("nav.cart")}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to="/checkout">{t("nav.checkout")}</Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to={ordersRoute} search={ordersSearch}>
-                {t("nav.orders")}
-              </Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
+            {primaryNavItems.map((item) => (
               <Link
-                to={user ? dashboardRoute : "/signin"}
-                search={
-                  user ? undefined : ({ redirect: signInRedirect, intent: "client" } as never)
-                }
+                key={`${item.to}-${item.label}`}
+                to={item.to}
+                search={item.search}
+                activeProps={{ className: "bg-white text-primary shadow-lg shadow-black/10" }}
+                activeOptions={{ exact: item.to === "/" }}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full border border-white/12 px-4 text-sm font-semibold whitespace-nowrap text-primary-foreground/88 transition",
+                  "bg-white/8 hover:bg-white/16 hover:text-primary-foreground",
+                )}
               >
-                {user ? dashboardLabel : t("nav.signin")}
+                {item.label}
               </Link>
-            </Button>
-            <Button asChild variant="secondary" size="sm" className="rounded-full">
-              <Link to={adminRoute} search={adminSearch}>
-                {t("nav.marketRepDashboard")}
-              </Link>
-            </Button>
+            ))}
           </nav>
 
-          <div className="flex items-center gap-3 text-xs font-semibold uppercase tracking-[0.14em] text-primary-foreground/85">
-            <span>{t("lang.change")}</span>
-            <span className="hidden h-4 w-px bg-white/20 sm:inline-block" />
-            <span>{t("ui.toggleTheme")}</span>
+          <div className="flex items-center gap-2 overflow-x-auto pb-1 text-xs font-semibold [-ms-overflow-style:none] [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+            {accountNavItems.map((item) => (
+              <Link
+                key={`${item.to}-${item.label}`}
+                to={item.to}
+                search={item.search}
+                activeProps={{ className: "bg-background text-primary shadow-sm" }}
+                className={cn(
+                  "inline-flex h-9 items-center rounded-full border border-white/18 px-4 uppercase tracking-[0.12em] whitespace-nowrap transition",
+                  "bg-transparent text-primary-foreground/82 hover:bg-white/10 hover:text-primary-foreground",
+                )}
+              >
+                {item.label}
+              </Link>
+            ))}
           </div>
         </div>
       </div>
@@ -311,14 +317,19 @@ export function Header() {
               ))}
             </select>
           </div>
-          <Button
-            asChild
-            variant="outline"
-            size="sm"
-            className="rounded-xl border-white/25 bg-background/95 text-primary hover:bg-background"
-          >
-            <Link to={dashboardRoute}>{dashboardLabel}</Link>
-          </Button>
+          <div className="flex gap-2 sm:col-span-2">
+            {accountNavItems.map((item) => (
+              <Link
+                key={`mobile-${item.to}-${item.label}`}
+                to={item.to}
+                search={item.search}
+                activeProps={{ className: "bg-background text-primary" }}
+                className="inline-flex h-9 flex-1 items-center justify-center rounded-xl border border-white/25 bg-white/10 px-3 text-center text-xs font-semibold text-primary-foreground transition hover:bg-white/18"
+              >
+                {item.label}
+              </Link>
+            ))}
+          </div>
         </div>
       </div>
     </header>
