@@ -8,7 +8,9 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import {
+  CATEGORIES,
   PRODUCTS,
+  categoryLabel,
   formatRWF,
   productDescription,
   type Product,
