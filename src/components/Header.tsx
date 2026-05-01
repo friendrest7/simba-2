@@ -25,6 +25,7 @@ import {
 import { useState } from "react";
 import logoImage from "@/assets/logo1.png";
 import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 
 export function Header() {
   const { theme, toggle, accent, setAccent } = useTheme();
@@ -181,18 +182,25 @@ export function Header() {
                 <div className="pt-2 space-y-4">
                   <div className="space-y-1.5">
                     <label className="text-[10px] font-bold uppercase text-muted-foreground">{t("ui.colorTheme")}</label>
-                    <select
-                      aria-label={t("ui.colorTheme")}
+                    <Select
                       value={accent}
-                      onChange={(e) => setAccent(e.target.value as (typeof ACCENTS)[number]["id"])}
-                      className="w-full h-10 rounded-lg border bg-background px-3 text-sm font-medium"
+                      onValueChange={(value) => setAccent(value as (typeof ACCENTS)[number]["id"]) }
                     >
-                      {ACCENTS.map((themeAccent) => (
-                        <option key={themeAccent.id} value={themeAccent.id}>
-                          {t(`accent.${themeAccent.id}`)}
-                        </option>
-                      ))}
-                    </select>
+                      <SelectTrigger className="w-full h-10">
+                        <SelectValue placeholder="Select a color theme" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {ACCENTS.map((themeAccent) => (
+                          <SelectItem key={themeAccent.id} value={themeAccent.id} className="flex items-center gap-2">
+                            <div
+                              className="h-4 w-4 rounded-full border border-border"
+                              style={{ backgroundColor: themeAccent.swatch }}
+                            />
+                            <span>{t(`accent.${themeAccent.id}`)}</span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <Button variant="outline" className="w-full justify-start gap-2 h-10" onClick={toggle}>
                     {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
@@ -265,18 +273,25 @@ export function Header() {
 
             <div className="relative">
               <Palette className="pointer-events-none absolute left-1.5 top-1/2 h-2.5 w-2.5 -translate-y-1/2 text-primary" />
-              <select
-                aria-label={t("ui.colorTheme")}
+              <Select
                 value={accent}
-                onChange={(event) => setAccent(event.target.value as (typeof ACCENTS)[number]["id"])}
-                className="h-7 min-w-[3.5rem] rounded-full border border-white/20 bg-white pl-5 pr-1 text-[9px] font-bold text-foreground"
+                onValueChange={(value) => setAccent(value as (typeof ACCENTS)[number]["id"]) }
               >
-                {ACCENTS.map((themeAccent) => (
-                  <option key={themeAccent.id} value={themeAccent.id}>
-                    {t(`accent.${themeAccent.id}`)}
-                  </option>
-                ))}
-              </select>
+                <SelectTrigger className="h-7 min-w-[3.5rem] rounded-full border border-white/20 bg-white pl-5 pr-1 text-[9px] font-bold text-foreground">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {ACCENTS.map((themeAccent) => (
+                    <SelectItem key={themeAccent.id} value={themeAccent.id} className="flex items-center gap-2">
+                      <div
+                        className="h-3 w-3 rounded-full border border-border"
+                        style={{ backgroundColor: themeAccent.swatch }}
+                      />
+                      <span>{t(`accent.${themeAccent.id}`)}</span>
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
             </div>
 
             <Button

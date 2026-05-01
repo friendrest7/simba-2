@@ -5,6 +5,7 @@ import { getStoredLang, translate } from "@/lib/i18n";
 import type { Product } from "@/lib/products";
 import {
   getDeliveryFee,
+  getLastOrder,
   getStockMap,
   placeOrder,
   subscribeStore,
@@ -72,7 +73,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
   const [hydrated, setHydrated] = useState(false);
   const [selectedBranch, setSelectedBranchState] = useState<BranchName>("Remera");
   const [stockMap, setStockMap] = useState<Record<number, number>>({});
-  const [lastOrder, setLastOrder] = useState<CustomerOrder | null>(null);
+  const [lastOrder, setLastOrder] = useState<CustomerOrder | null>(getLastOrder());
 
   useEffect(() => {
     setItems(readStoredCart());
@@ -82,6 +83,7 @@ export function CartProvider({ children }: { children: ReactNode }) {
 
     return subscribeStore(() => {
       setStockMap(getStockMap());
+      setLastOrder(getLastOrder());
     });
   }, []);
 

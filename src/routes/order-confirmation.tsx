@@ -1,180 +1,108 @@
-import type { ReactNode } from "react";
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { CheckCircle2, PackageCheck, Truck } from "lucide-react";
+import { CheckCircle2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
-import { useAuth } from "@/lib/auth";
+import { useCart } from "@/lib/cart";
 import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
-import {
-  formatOrderStatus,
-  formatPaymentStatus,
-  getDeliveryStatusText,
-  getLastOrder,
-  getOrderById,
-  getOrderSummaryLines,
-} from "@/lib/order-store";
+import { formatOrderStatus, formatPaymentStatus } from "@/lib/order-store";
 
 export const Route = createFileRoute("/order-confirmation")({
   component: OrderConfirmationPage,
-  validateSearch: (search: Record<string, unknown>) => ({
-    orderId: typeof search.orderId === "string" ? search.orderId : undefined,
+  head: () => ({
+    meta: [{ title: translate(getStoredLang(), "meta.orderConfirmationTitle") }],
   }),
-  head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.orderConfirmationTitle") }] }),
 });
 
 function OrderConfirmationPage() {
-  const { user } = useAuth();
+  const { lastOrder, clear } = useCart();
   const { t } = useI18n();
-  const { orderId } = Route.useSearch();
-  const order = (orderId ? getOrderById(orderId) : null) ?? getLastOrder();
 
-  if (!order) {
+  if (!lastOrder) {
     return (
-      <div className="mx-auto max-w-3xl px-4 py-20 text-center">
-        <h1 className="text-3xl font-extrabold">{t("order.confirmationMissing")}</h1>
-        <p className="mt-2 text-muted-foreground">{t("order.confirmationMissingHint")}</p>
-        <Button asChild className="mt-6 rounded-full">
-          <Link to="/products">{t("ui.continueShopping")}</Link>
+      <div className="container mx-auto px-4 py-8 text-center">
+        <h1 className="mb-4 text-3xl font-bold">{t("order.confirmationMissing")}</h1>
+        <p className="mb-6 text-muted-foreground">{t("order.confirmationMissingHint")}</p>
+        <Button asChild variant="outline">
+          <Link to="/cart">{t("ui.backToCart")}</Link>
         </Button>
       </div>
     );
   }
 
   return (
-    <div className="mx-auto max-w-5xl px-4 py-12">
-      <div className="rounded-[2rem] border border-border bg-card p-8 shadow-sm">
-        <div className="mx-auto mb-5 flex h-20 w-20 items-center justify-center rounded-full bg-primary/10">
-          <CheckCircle2 className="h-12 w-12 text-primary" />
-        </div>
-        <div className="text-center">
-          <h1 className="text-3xl font-extrabold">{t("order.confirmationTitle")}</h1>
-          <p className="mt-2 text-muted-foreground">{t("order.confirmationBody")}</p>
+    <div className="container mx-auto px-4 py-8">
+      <div className="mx-auto max-w-3xl rounded-lg border bg-background p-8 shadow-md">
+        <div className="mb-6 text-center">
+          <CheckCircle2 className="mx-auto mb-4 h-20 w-20 text-green-500" />
+          <h1 className="mb-2 text-4xl font-bold text-foreground">{t("order.confirmationTitle")}</h1>
+          <p className="text-lg text-muted-foreground">{t("order.confirmationBody")}</p>
         </div>
 
-        <div className="mt-8 grid gap-6 lg:grid-cols-[1fr_320px]">
-          <div className="rounded-[1.5rem] border border-border bg-background/70 p-5">
-            <div className="grid gap-4 sm:grid-cols-2">
-              <InfoCard
-                icon={<PackageCheck className="h-4 w-4" />}
-                label={t("order.orderId")}
-                value={order.id}
-              />
-              <InfoCard
-                icon={<Truck className="h-4 w-4" />}
-                label={t("order.deliveryStatusLabel")}
-                value={getDeliveryStatusText(order.status, t)}
-              />
-              <InfoCard
-                label={t("order.paymentStatusLabel")}
-                value={formatPaymentStatus(order.paymentStatus, t)}
-              />
-              <InfoCard label={t("checkout.name")} value={order.customerName} />
-              <InfoCard label={t("checkout.phone")} value={order.phoneNumber} />
-              <InfoCard
-                label={t("checkout.deliveryLocationLabel")}
-                value={order.deliveryLocation}
-              />
-              <InfoCard
-                label={t("ui.paymentMethod")}
-                value={t(`checkout.payment.${order.paymentMethod}`)}
-              />
-              {order.branchName && (
-                <InfoCard label={t("dashboard.branchLabel")} value={order.branchName} />
-              )}
-              {order.deliveryNotes && (
-                <InfoCard label={t("checkout.deliveryNotes")} value={order.deliveryNotes} />
-              )}
-              <InfoCard
-                label={t("dashboard.dateColumn")}
-                value={new Date(order.createdAt).toLocaleString()}
-              />
+        <div className="mt-6 rounded-lg border bg-secondary p-6">
+          <h2 className="mb-4 text-2xl font-bold text-foreground">{t("ui.orderSummary")}</h2>
+          <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
+            <div>
+              <p className="text-sm text-muted-foreground">{t("order.orderId")}</p>
+              <p className="break-all font-semibold text-foreground">{lastOrder.id}</p>
             </div>
-
-            <div className="mt-6">
-              <div className="text-sm font-bold uppercase tracking-[0.16em] text-primary">
-                {t("ui.orderSummary")}
-              </div>
-              <div className="mt-3 space-y-3">
-                {order.items.map((item) => (
-                  <div
-                    key={item.productId}
-                    className="flex items-center justify-between rounded-xl border border-border bg-card px-4 py-3 text-sm"
-                  >
+            <div>
+              <p className="text-sm text-muted-foreground">{t("order.statusLabel")}</p>
+              <p className="font-semibold text-foreground">{formatOrderStatus(lastOrder.status, t)}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("checkout.customerInfo")}</p>
+              <p className="font-semibold text-foreground">{lastOrder.customerName}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("checkout.phone")}</p>
+              <p className="font-semibold text-foreground">{lastOrder.phoneNumber}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("checkout.deliveryLocation")}</p>
+              <p className="font-semibold text-foreground">{lastOrder.deliveryLocation}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("checkout.paymentMethod")}</p>
+              <p className="font-semibold text-foreground">
+                {formatPaymentStatus(lastOrder.paymentStatus, t)}
+              </p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("pickup.branch")}</p>
+              <p className="font-semibold text-foreground">{lastOrder.branchName || "-"}</p>
+            </div>
+            <div>
+              <p className="text-sm text-muted-foreground">{t("order.paymentStatusLabel")}</p>
+              <p className="font-semibold text-foreground">
+                {formatPaymentStatus(lastOrder.paymentStatus, t)}
+              </p>
+            </div>
+            <div className="md:col-span-2">
+              <p className="text-sm text-muted-foreground">{t("ui.orderSummary")}</p>
+              <ul className="mt-2 space-y-2">
+                {lastOrder.items.map((item) => (
+                  <li key={`${lastOrder.id}-${item.productId}`} className="flex justify-between text-sm font-medium">
                     <span>
-                      {item.name} x{item.quantity}
+                      {item.quantity} x {item.name}
                     </span>
-                    <span className="font-semibold">{formatRWF(item.price * item.quantity)}</span>
-                  </div>
+                    <span>{formatRWF(item.price * item.quantity)}</span>
+                  </li>
                 ))}
-              </div>
+              </ul>
+            </div>
+            <div className="md:col-span-2 flex justify-between border-t pt-4 font-bold text-foreground">
+              <span>{t("cart.total")}</span>
+              <span>{formatRWF(lastOrder.total)}</span>
             </div>
           </div>
+        </div>
 
-          <aside className="rounded-[1.5rem] border border-border bg-background/70 p-5">
-            <div className="text-sm font-bold uppercase tracking-[0.16em] text-primary">
-              {t("order.statusLabel")}
-            </div>
-            <div className="mt-2 rounded-2xl bg-primary/8 p-4">
-              <div className="text-lg font-bold text-primary">
-                {formatOrderStatus(order.status, t)}
-              </div>
-              <div className="mt-1 text-sm text-muted-foreground">
-                {getDeliveryStatusText(order.status, t)}
-              </div>
-            </div>
-
-            <div className="mt-5 space-y-3 text-sm">
-              {getOrderSummaryLines(order).map((line) => (
-                <SummaryRow
-                  key={line.label}
-                  label={t(line.label)}
-                  value={line.value === "cart.free" ? t("cart.free") : line.value}
-                />
-              ))}
-            </div>
-
-            <div className="mt-6 grid gap-3">
-              <Button asChild className="rounded-full">
-                <Link to="/products">{t("ui.continueShopping")}</Link>
-              </Button>
-              <Button asChild variant="outline" className="rounded-full">
-                <Link
-                  to={
-                    user?.role === "manager" || user?.role === "staff"
-                      ? "/dashboard"
-                      : "/client-dashboard"
-                  }
-                >
-                  {user?.role === "manager" || user?.role === "staff"
-                    ? t("nav.marketRepDashboard")
-                    : t("client.dashboard")}
-                </Link>
-              </Button>
-            </div>
-          </aside>
+        <div className="mt-8 text-center">
+          <Button onClick={() => void clear()} asChild variant="link" className="text-muted-foreground hover:text-primary">
+            <Link to="/">{t("ui.backHome")}</Link>
+          </Button>
         </div>
       </div>
-    </div>
-  );
-}
-
-function InfoCard({ label, value, icon }: { label: string; value: string; icon?: ReactNode }) {
-  return (
-    <div className="rounded-xl border border-border bg-card p-4">
-      <div className="flex items-center gap-2 text-xs font-bold uppercase tracking-[0.14em] text-primary">
-        {icon}
-        <span>{label}</span>
-      </div>
-      <div className="mt-2 font-semibold text-foreground">{value}</div>
-    </div>
-  );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="font-semibold">{value}</span>
     </div>
   );
 }

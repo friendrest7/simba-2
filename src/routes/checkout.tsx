@@ -1,499 +1,250 @@
+import { useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
-import { useEffect, useState, type HTMLAttributes, type HTMLInputTypeAttribute } from "react";
-import {
-  CheckCircle2,
-  CreditCard,
-  LoaderCircle,
-  MapPin,
-  Smartphone,
-  UserRound,
-} from "lucide-react";
+import { toast } from "sonner";
+import { Smartphone } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Textarea } from "@/components/ui/textarea";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { getStoredLang, translate, useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
-import type { PaymentMethod, PaymentStatus } from "@/lib/order-store";
+import type { PaymentMethod } from "@/lib/order-store";
 
 export const Route = createFileRoute("/checkout")({
   component: CheckoutPage,
   head: () => ({ meta: [{ title: translate(getStoredLang(), "meta.checkoutTitle") }] }),
 });
 
-type PaymentStage = "idle" | "processing" | "success" | "failure";
+type FormData = {
+  customerName: string;
+  phoneNumber: string;
+  deliveryLocation: string;
+  deliveryNotes: string;
+  paymentMethod: PaymentMethod;
+  momoNumber: string;
+};
 
 function CheckoutPage() {
-  const { items, subtotal, deliveryFee, total, count, checkout, selectedBranch } = useCart();
+  const navigate = useNavigate();
   const { user } = useAuth();
   const { t } = useI18n();
-  const navigate = useNavigate();
-  const [submitting, setSubmitting] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-  const [paymentMethod, setPaymentMethod] = useState<PaymentMethod>("mobile-money");
-  const [paymentStage, setPaymentStage] = useState<PaymentStage>("idle");
-  const [paymentStatus, setPaymentStatus] = useState<PaymentStatus>("pending");
-  const [formData, setFormData] = useState({
-    customerName: "",
-    phoneNumber: "",
+  const { count, subtotal, deliveryFee, total, checkout, overLimitItems, selectedBranch } = useCart();
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [formData, setFormData] = useState<FormData>({
+    customerName: user?.name ?? "",
+    phoneNumber: user?.phone ?? "",
     deliveryLocation: "",
     deliveryNotes: "",
-    momoNumber: "",
+    paymentMethod: "mobile-money",
+    momoNumber: user?.phone ?? "",
   });
-  const normalizedPhoneNumber = formData.phoneNumber.replace(/[^\d+]/g, "");
-  const normalizedMomoNumber = formData.momoNumber.replace(/[^\d+]/g, "");
 
-  useEffect(() => {
-    if (count === 0) {
-      navigate({ to: "/cart" });
-    }
-  }, [count, navigate]);
+  const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = event.target;
+    setFormData((prev) => ({ ...prev, [name]: value }));
+  };
 
-  if (count === 0) {
-    return null;
-  }
-
-  const submitOrder = async (event: React.FormEvent) => {
+  const handleSubmit = async (event: React.FormEvent) => {
     event.preventDefault();
-    setError(null);
 
-    if (
-      !formData.customerName.trim() ||
-      !formData.phoneNumber.trim() ||
-      !formData.deliveryLocation.trim()
-    ) {
-      setError(t("checkout.error.completeDetails"));
+    if (!formData.customerName || !formData.phoneNumber || !formData.deliveryLocation) {
+      toast.error(t("checkout.error.completeDetails"));
       return;
     }
 
-    if (!isValidPhoneNumber(normalizedPhoneNumber)) {
-      setError(t("checkout.error.phone"));
+    if (!/^\d{10}$/.test(formData.phoneNumber.replace(/\D/g, ""))) {
+      toast.error(t("checkout.error.phone"));
       return;
     }
 
-    if (paymentMethod === "mobile-money" && !isValidPhoneNumber(normalizedMomoNumber)) {
-      setError(t("checkout.error.momo"));
+    if (formData.paymentMethod === "mobile-money" && !formData.momoNumber.trim()) {
+      toast.error(t("checkout.error.momo"));
       return;
     }
 
-    setSubmitting(true);
+    if (overLimitItems.length > 0) {
+      const names = overLimitItems.map((item) => item.product.name).join(", ");
+      toast.error(`${t("checkout.error.stockUnavailable")} ${names}`);
+      void navigate({ to: "/cart" });
+      return;
+    }
 
-    let nextPaymentStatus: PaymentStatus = "cash-on-delivery";
+    setIsSubmitting(true);
+    try {
+      const result = await checkout({
+        customerId: user?.id,
+        customerEmail: user?.email ?? undefined,
+        branchName: selectedBranch,
+        customerName: formData.customerName,
+        phoneNumber: formData.phoneNumber,
+        deliveryLocation: formData.deliveryLocation,
+        deliveryNotes: formData.deliveryNotes,
+        paymentMethod: formData.paymentMethod,
+        momoNumber: formData.paymentMethod === "mobile-money" ? formData.momoNumber : undefined,
+      });
 
-    if (paymentMethod === "mobile-money") {
-      setPaymentStage("processing");
-      setPaymentStatus("processing");
-      await delay(1200);
-      await delay(800);
-      if (shouldRejectMomoNumber(normalizedMomoNumber)) {
-        setSubmitting(false);
-        setPaymentStage("failure");
-        setPaymentStatus("pending");
-        setError(t("checkout.paymentFailed"));
+      if (result.ok) {
+        toast.success(t("ui.orderPlaced"));
+        await navigate({ to: "/order-confirmation" });
         return;
       }
-      setPaymentStage("success");
-      setPaymentStatus("paid");
-      nextPaymentStatus = "paid";
-      await delay(500);
+
+      const productMessage = result.productName ? ` ${result.productName}` : "";
+      toast.error(`${t(result.error)}${productMessage}`);
+    } finally {
+      setIsSubmitting(false);
     }
-
-    const result = await checkout({
-      customerId: user?.id,
-      customerEmail: user?.email,
-      branchName: selectedBranch,
-      customerName: formData.customerName.trim(),
-      phoneNumber: normalizedPhoneNumber,
-      deliveryLocation: formData.deliveryLocation.trim(),
-      deliveryNotes: formData.deliveryNotes.trim(),
-      paymentMethod,
-      momoNumber: paymentMethod === "mobile-money" ? normalizedMomoNumber : undefined,
-      paymentStatus: nextPaymentStatus,
-    });
-
-    setSubmitting(false);
-
-    if (!result.ok) {
-      setPaymentStage("idle");
-      setPaymentStatus("pending");
-      setError(
-        result.productName
-          ? `${t("checkout.error.stockUnavailable")} ${result.productName}.`
-          : t(result.error),
-      );
-      return;
-    }
-
-    navigate({
-      to: "/order-confirmation",
-      search: { orderId: result.order.id } as never,
-    });
   };
 
   return (
     <div className="container mx-auto px-4 py-8">
-      <div className="mb-6">
-        <h1 className="text-3xl font-extrabold tracking-tight md:text-4xl">
-          {t("checkout.title")}
-        </h1>
-        <p className="mt-2 max-w-3xl text-sm text-muted-foreground">
-          {t("checkout.subtitleShort")}
-        </p>
-      </div>
+      <h1 className="mb-6 text-4xl font-bold text-foreground">{t("checkout.title")}</h1>
+      <p className="mb-8 text-lg text-muted-foreground">{t("checkout.subtitleShort")}</p>
 
-      <form onSubmit={submitOrder} className="grid gap-6 lg:grid-cols-[1fr_380px]">
-        <div className="space-y-6">
-          <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <UserRound className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">{t("checkout.customerDetails")}</h2>
-                <p className="text-sm text-muted-foreground">{t("checkout.customerDetailsHint")}</p>
-              </div>
-            </div>
-            <div className="grid gap-4 md:grid-cols-2">
-              <Field
-                id="customer-name"
-                label={t("checkout.name")}
-                value={formData.customerName}
-                onChange={(value) =>
-                  setFormData((current) => ({ ...current, customerName: value }))
-                }
-              />
-              <Field
-                id="phone-number"
-                label={t("checkout.phone")}
-                value={formData.phoneNumber}
-                onChange={(value) => setFormData((current) => ({ ...current, phoneNumber: value }))}
-                type="tel"
-                inputMode="tel"
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <MapPin className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">{t("checkout.deliveryLocationLabel")}</h2>
-                <p className="text-sm text-muted-foreground">
-                  {t("checkout.deliveryLocationHint")}
-                </p>
-              </div>
-            </div>
-            <div className="grid gap-4">
-              <Field
-                id="delivery-location"
-                label={t("checkout.deliveryLocationLabel")}
-                value={formData.deliveryLocation}
-                onChange={(value) =>
-                  setFormData((current) => ({ ...current, deliveryLocation: value }))
-                }
-                placeholder={t("checkout.addressPh")}
-              />
-              <TextAreaField
-                id="delivery-notes"
-                label={t("checkout.deliveryNotes")}
-                value={formData.deliveryNotes}
-                onChange={(value) =>
-                  setFormData((current) => ({ ...current, deliveryNotes: value }))
-                }
-                placeholder={t("checkout.deliveryNotesHint")}
-              />
-            </div>
-          </section>
-
-          <section className="rounded-[2rem] border border-border bg-card p-6 shadow-sm">
-            <div className="mb-4 flex items-center gap-3">
-              <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
-                <CreditCard className="h-5 w-5" />
-              </div>
-              <div>
-                <h2 className="text-lg font-bold">{t("ui.paymentMethod")}</h2>
-                <p className="text-sm text-muted-foreground">{t("checkout.paymentHint")}</p>
-              </div>
-            </div>
-            <div className="grid gap-3 md:grid-cols-2">
-              <PaymentOption
-                active={paymentMethod === "mobile-money"}
-                onClick={() => {
-                  setPaymentMethod("mobile-money");
-                  setPaymentStage("idle");
-                  setPaymentStatus("pending");
-                }}
-                label={t("checkout.mobileMoney")}
-                hint={t("checkout.mobileMoneyHint")}
-                icon={<Smartphone className="h-4 w-4" />}
-              />
-              <PaymentOption
-                active={paymentMethod === "cash-on-delivery"}
-                onClick={() => {
-                  setPaymentMethod("cash-on-delivery");
-                  setPaymentStage("idle");
-                  setPaymentStatus("cash-on-delivery");
-                }}
-                label={t("checkout.cashOnDelivery")}
-                hint={t("checkout.cashOnDeliveryHint")}
-                icon={<CreditCard className="h-4 w-4" />}
-              />
-            </div>
-            {paymentMethod === "mobile-money" ? (
-              <div className="mt-4 grid gap-4">
-                <Field
-                  id="momo-number"
-                  label={t("ui.mobileMoneyNumber")}
-                  value={formData.momoNumber}
-                  onChange={(value) =>
-                    setFormData((current) => ({ ...current, momoNumber: value }))
-                  }
-                  type="tel"
-                  inputMode="tel"
-                  placeholder={t("signin.phonePh")}
-                />
-                <PaymentStateCard stage={paymentStage} />
-              </div>
-            ) : (
-              <div className="mt-4 rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
-                {t("checkout.cashInstruction")}
-              </div>
-            )}
-          </section>
-        </div>
-
-        <aside className="h-fit rounded-[2rem] border border-border bg-card p-6 shadow-sm lg:sticky lg:top-20">
-          <h2 className="mb-4 text-xl font-extrabold">{t("ui.orderSummary")}</h2>
-          <div className="mb-4 rounded-2xl border border-primary/15 bg-primary/6 p-4">
-            <div className="text-xs font-bold uppercase tracking-[0.16em] text-primary">
-              {t("checkout.reviewOrder")}
-            </div>
-            <div className="mt-2 text-sm font-semibold text-foreground">
-              {t("dashboard.branchLabel")}: {selectedBranch}
-            </div>
-            <div className="mt-1 text-sm text-muted-foreground">{t("checkout.orderSummaryHint")}</div>
-          </div>
+      <div className="grid grid-cols-1 gap-8 lg:grid-cols-3">
+        <aside className="rounded-lg border bg-background p-6 shadow-sm lg:col-span-1">
+          <h2 className="mb-4 text-2xl font-bold text-foreground">{t("ui.orderSummary")}</h2>
           <div className="space-y-3">
-            {items.map(({ product, qty }) => (
-              <div
-                key={product.id}
-                className="flex items-center justify-between gap-3 rounded-xl border border-border bg-background/60 px-4 py-3 text-sm"
-              >
-                <div>
-                  <div className="font-semibold">{product.name}</div>
-                  <div className="text-xs text-muted-foreground">
-                    {qty} x {formatRWF(product.price)}
-                  </div>
-                </div>
-                <div className="font-semibold">{formatRWF(product.price * qty)}</div>
-              </div>
-            ))}
-          </div>
-          <div className="mt-5 space-y-2.5 text-sm">
-            <SummaryRow label={t("cart.subtotal")} value={formatRWF(subtotal)} />
-            <SummaryRow
-              label={t("cart.delivery")}
-              value={deliveryFee === 0 ? t("cart.free") : formatRWF(deliveryFee)}
-            />
-          </div>
-          <div className="mt-4 flex items-baseline justify-between border-t border-border pt-4">
-            <span className="font-semibold">{t("cart.total")}</span>
-            <span className="text-2xl font-black text-primary">{formatRWF(total)}</span>
-          </div>
-          <div className="mt-4 rounded-2xl border border-border bg-background/70 p-4 text-sm">
-            <div className="font-semibold text-foreground">{t("order.paymentStatusLabel")}</div>
-            <div className="mt-1 text-muted-foreground">
-              {t(
-                `order.payment.${
-                  paymentMethod === "cash-on-delivery" ? "cash-on-delivery" : paymentStatus
-                }`,
-              )}
+            <div className="flex justify-between text-muted-foreground">
+              <span>
+                {count} {t(count === 1 ? "cart.item" : "cart.items")}
+              </span>
+              <span>{formatRWF(subtotal)}</span>
+            </div>
+            <div className="flex justify-between text-muted-foreground">
+              <span>{t("cart.delivery")}</span>
+              <span>{deliveryFee === 0 ? t("cart.free") : formatRWF(deliveryFee)}</span>
+            </div>
+            <div className="flex justify-between border-t pt-3 font-bold text-foreground">
+              <span>{t("cart.total")}</span>
+              <span>{formatRWF(total)}</span>
             </div>
           </div>
-          {error && (
-            <div className="mt-4 rounded-xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-medium text-destructive">
-              {error}
-            </div>
-          )}
-          <Button
-            type="submit"
-            size="lg"
-            className="mt-6 w-full rounded-full"
-            disabled={submitting}
-          >
-            {submitting
-              ? t("ui.processing")
-              : paymentMethod === "mobile-money"
-                ? t("checkout.payWithMomo")
-                : t("checkout.placeOrder")}
-          </Button>
-          <Button asChild variant="ghost" className="mt-2 w-full rounded-full">
+          <p className="mt-4 text-xs text-muted-foreground">{t("checkout.orderSummaryHint")}</p>
+          <div className="mt-4 rounded-xl bg-secondary p-4 text-sm">
+            <div className="font-semibold text-foreground">{t("pickup.branch")}</div>
+            <div className="mt-1 text-primary">{selectedBranch}</div>
+          </div>
+          <Button asChild variant="link" className="mt-4 px-0 text-sm text-muted-foreground hover:text-primary">
             <Link to="/cart">{t("ui.backToCart")}</Link>
           </Button>
         </aside>
-      </form>
-    </div>
-  );
-}
 
-function Field({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-  type = "text",
-  inputMode,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-  type?: HTMLInputTypeAttribute;
-  inputMode?: HTMLAttributes<HTMLInputElement>["inputMode"];
-}) {
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <Input
-        id={id}
-        type={type}
-        inputMode={inputMode}
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1.5 h-11 rounded-xl"
-      />
-    </div>
-  );
-}
+        <div className="rounded-lg border bg-background p-6 shadow-sm lg:col-span-2">
+          <form onSubmit={handleSubmit}>
+            <section className="mb-8">
+              <h2 className="mb-4 border-b pb-2 text-2xl font-bold text-foreground">
+                {t("checkout.customerDetails")}
+              </h2>
+              <div className="space-y-4">
+                <div>
+                  <Label htmlFor="customerName">{t("checkout.customerInfo")}</Label>
+                  <Input
+                    id="customerName"
+                    name="customerName"
+                    value={formData.customerName}
+                    onChange={handleInputChange}
+                    placeholder={t("signin.namePh")}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="phoneNumber">{t("checkout.phone")}</Label>
+                  <div className="relative">
+                    <Smartphone className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-primary" />
+                    <Input
+                      id="phoneNumber"
+                      name="phoneNumber"
+                      value={formData.phoneNumber}
+                      onChange={handleInputChange}
+                      placeholder={t("signin.phonePh")}
+                      required
+                      className="mt-1 pl-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label htmlFor="deliveryLocation">{t("checkout.deliveryLocationLabel")}</Label>
+                  <Input
+                    id="deliveryLocation"
+                    name="deliveryLocation"
+                    value={formData.deliveryLocation}
+                    onChange={handleInputChange}
+                    placeholder={t("checkout.deliveryLocationHint")}
+                    required
+                    className="mt-1"
+                  />
+                </div>
+                <div>
+                  <Label htmlFor="deliveryNotes">{t("checkout.deliveryNotes")}</Label>
+                  <Input
+                    id="deliveryNotes"
+                    name="deliveryNotes"
+                    value={formData.deliveryNotes}
+                    onChange={handleInputChange}
+                    placeholder={t("checkout.deliveryNotesHint")}
+                    className="mt-1"
+                  />
+                </div>
+              </div>
+            </section>
 
-function TextAreaField({
-  id,
-  label,
-  value,
-  onChange,
-  placeholder,
-}: {
-  id: string;
-  label: string;
-  value: string;
-  onChange: (value: string) => void;
-  placeholder?: string;
-}) {
-  return (
-    <div>
-      <Label htmlFor={id}>{label}</Label>
-      <Textarea
-        id={id}
-        value={value}
-        placeholder={placeholder}
-        onChange={(event) => onChange(event.target.value)}
-        className="mt-1.5 min-h-28 rounded-xl"
-      />
-    </div>
-  );
-}
+            <section className="mb-8">
+              <h2 className="mb-4 border-b pb-2 text-2xl font-bold text-foreground">
+                {t("checkout.paymentMethod")}
+              </h2>
+              <RadioGroup
+                value={formData.paymentMethod}
+                onValueChange={(value) =>
+                  setFormData((prev) => ({ ...prev, paymentMethod: value as PaymentMethod }))
+                }
+              >
+                <div className="flex items-center space-x-3 py-2">
+                  <RadioGroupItem value="mobile-money" id="mobile-money" />
+                  <Label htmlFor="mobile-money" className="flex cursor-pointer flex-col space-y-1">
+                    <span className="font-semibold text-foreground">{t("checkout.mobileMoney")}</span>
+                    <span className="text-xs text-muted-foreground">{t("checkout.mobileMoneyHint")}</span>
+                  </Label>
+                </div>
+                <div className="flex items-center space-x-3 py-2">
+                  <RadioGroupItem value="cash-on-delivery" id="cash-on-delivery" />
+                  <Label htmlFor="cash-on-delivery" className="flex cursor-pointer flex-col space-y-1">
+                    <span className="font-semibold text-foreground">
+                      {t("checkout.payment.cash-on-delivery")}
+                    </span>
+                    <span className="text-xs text-muted-foreground">{t("ui.cashOnDeliveryHint")}</span>
+                  </Label>
+                </div>
+              </RadioGroup>
+              {formData.paymentMethod === "mobile-money" ? (
+                <div className="mt-4">
+                  <Label htmlFor="momoNumber">{t("ui.mobileMoneyNumber")}</Label>
+                  <Input
+                    id="momoNumber"
+                    name="momoNumber"
+                    value={formData.momoNumber}
+                    onChange={handleInputChange}
+                    placeholder={t("signin.phonePh")}
+                    className="mt-1"
+                  />
+                </div>
+              ) : null}
+              <p className="mt-4 text-xs text-muted-foreground">{t("checkout.paymentHint")}</p>
+            </section>
 
-function PaymentOption({
-  active,
-  onClick,
-  label,
-  hint,
-  icon,
-}: {
-  active: boolean;
-  onClick: () => void;
-  label: string;
-  hint: string;
-  icon: React.ReactNode;
-}) {
-  return (
-    <button
-      type="button"
-      onClick={onClick}
-      className={`rounded-xl border p-4 text-left transition ${
-        active
-          ? "border-primary bg-primary/8 shadow-md"
-          : "border-border bg-background hover:border-primary/40"
-      }`}
-    >
-      <div className="flex items-center gap-2 text-sm font-semibold text-foreground">
-        <span className="text-primary">{icon}</span>
-        {label}
-      </div>
-      <div className="mt-1 text-xs text-muted-foreground">{hint}</div>
-    </button>
-  );
-}
-
-function PaymentStateCard({ stage }: { stage: PaymentStage }) {
-  const { t } = useI18n();
-
-  if (stage === "idle") {
-    return (
-      <div className="rounded-2xl border border-border bg-background/70 p-4 text-sm text-muted-foreground">
-        {t("checkout.momoInstruction")}
-      </div>
-    );
-  }
-
-  if (stage === "success") {
-    return (
-      <div className="rounded-2xl border border-emerald-500/20 bg-emerald-500/10 p-4 text-sm text-emerald-700">
-        <div className="flex items-center gap-2 font-semibold">
-          <CheckCircle2 className="h-4 w-4" />
-          {t("checkout.paymentSuccess")}
+            <Button
+              type="submit"
+              className="h-12 w-full text-lg font-bold"
+              disabled={count === 0 || overLimitItems.length > 0 || isSubmitting}
+            >
+              {isSubmitting ? t("ui.processing") : t("ui.placeOrder")}
+            </Button>
+          </form>
         </div>
-        <div className="mt-1 text-emerald-700/80">{t("checkout.paymentSuccessHint")}</div>
       </div>
-    );
-  }
-
-  if (stage === "failure") {
-    return (
-      <div className="rounded-2xl border border-destructive/20 bg-destructive/10 p-4 text-sm text-destructive">
-        <div className="font-semibold">{t("checkout.paymentFailed")}</div>
-        <div className="mt-1 text-destructive/80">{t("checkout.paymentFailedHint")}</div>
-      </div>
-    );
-  }
-
-  return (
-    <div className="rounded-2xl border border-primary/20 bg-primary/8 p-4 text-sm text-primary">
-      <div className="flex items-center gap-2 font-semibold">
-        <LoaderCircle className="h-4 w-4 animate-spin" />
-        {t("checkout.paymentProcessing")}
-      </div>
-      <div className="mt-1 text-primary/80">{t("checkout.paymentProcessingHint")}</div>
     </div>
   );
-}
-
-function SummaryRow({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="flex items-center justify-between gap-4">
-      <span className="text-muted-foreground">{label}</span>
-      <span className="text-right font-semibold">{value}</span>
-    </div>
-  );
-}
-
-function isValidPhoneNumber(phoneNumber: string) {
-  const digitsOnly = phoneNumber.replace(/\D/g, "");
-  return digitsOnly.length >= 9 && digitsOnly.length <= 15;
-}
-
-function delay(ms: number) {
-  return new Promise((resolve) => window.setTimeout(resolve, ms));
-}
-
-function shouldRejectMomoNumber(phoneNumber: string) {
-  const digitsOnly = phoneNumber.replace(/\D/g, "");
-  return digitsOnly.endsWith("000") || digitsOnly.endsWith("999");
 }
