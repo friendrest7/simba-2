@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { createFileRoute, Link, useNavigate } from "@tanstack/react-router";
 import { toast } from "sonner";
 import { Smartphone } from "lucide-react";
@@ -40,6 +40,29 @@ function CheckoutPage() {
     paymentMethod: "mobile-money",
     momoNumber: user?.phone ?? "",
   });
+
+  useEffect(() => {
+    if (!user) {
+      void navigate({ to: "/signin", search: { redirect: "/checkout" } as never, replace: true });
+    }
+  }, [navigate, user]);
+
+  useEffect(() => {
+    setFormData((prev) => ({
+      ...prev,
+      customerName: user?.name ?? prev.customerName,
+      phoneNumber: user?.phone ?? prev.phoneNumber,
+      momoNumber: user?.phone ?? prev.momoNumber,
+    }));
+  }, [user]);
+
+  if (!user) {
+    return (
+      <div className="container mx-auto px-4 py-16 text-center">
+        <p className="text-sm text-muted-foreground">{t("cart.signinToCheckout")}</p>
+      </div>
+    );
+  }
 
   const handleInputChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = event.target;

@@ -3,6 +3,7 @@ import { getStoredLang, translate } from "@/lib/i18n";
 import { useState } from "react";
 import { Minus, Package2, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { useAuth } from "@/lib/auth";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import { formatRWF } from "@/lib/products";
@@ -13,6 +14,7 @@ export const Route = createFileRoute("/cart")({
 });
 
 function CartPage() {
+  const { user } = useAuth();
   const {
     items,
     subtotal,
@@ -124,7 +126,13 @@ function CartPage() {
             className="mt-6 w-full rounded-full"
             disabled={overLimitItems.length > 0}
           >
-            <Link to="/checkout">{t("ui.proceedToCheckout")}</Link>
+            {user ? (
+              <Link to="/checkout">{t("ui.proceedToCheckout")}</Link>
+            ) : (
+              <Link to="/signin" search={{ redirect: "/checkout" } as never}>
+                {t("cart.signinToCheckout")}
+              </Link>
+            )}
           </Button>
           <Button asChild variant="ghost" className="mt-2 w-full rounded-full">
             <Link to="/products">{t("ui.continueShopping")}</Link>
