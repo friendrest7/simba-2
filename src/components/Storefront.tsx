@@ -1,6 +1,6 @@
 import { Link, useNavigate } from "@tanstack/react-router";
 import { useEffect, useMemo, useState } from "react";
-import { ArrowRight, Search, SlidersHorizontal, X } from "lucide-react";
+import { ArrowRight, Search, SlidersHorizontal, Sparkles, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
@@ -8,9 +8,7 @@ import { AIAssistant } from "@/components/AIAssistant";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import {
-  CATEGORIES,
   PRODUCTS,
-  categoryLabel,
   formatRWF,
   productDescription,
   type Product,
@@ -39,6 +37,25 @@ const matchesSearch = (query: string, productText: string) => {
   return terms.every((term) => productText.includes(term));
 };
 
+type AssistantResponse = {
+  answer: string;
+  suggestedQuery: string;
+  productIds: number[];
+};
+
+const buildSearchFallback = (message: string, branch: string, candidates: Product[]) => {
+  const normalized = message.trim().toLowerCase();
+  const shortlist = candidates.slice(0, 6);
+
+  return {
+    answer: shortlist.length
+      ? `Showing visual matches for ${branch}: ${shortlist.map((product) => product.name).join(", ")}.`
+      : `No strong visual matches found for ${branch}. Try a category, budget, or brand.`,
+    suggestedQuery: normalized || message.trim(),
+    productIds: shortlist.map((product) => product.id),
+  };
+};
+
 export function Storefront({
   search,
   basePath,
@@ -48,11 +65,15 @@ export function Storefront({
   basePath: "/products" | "/shop";
   titleKey: string;
 }) {
-  const { t } = useI18n();
+  const { lang, t } = useI18n();
   const { stockOf, selectedBranch } = useCart();
   const navigate = useNavigate();
   const [query, setQuery] = useState(search.q ?? "");
   const [showFilters, setShowFilters] = useState(false);
+  const [aiLoading, setAiLoading] = useState(false);
+  const [aiSummary, setAiSummary] = useState<string | null>(null);
+  const [aiRecommendedIds, setAiRecommendedIds] = useState<number[]>([]);
+  const [aiUsedFallback, setAiUsedFallback] = useState(false);
 
   useEffect(() => {
     setQuery(search.q ?? "");
@@ -77,6 +98,9 @@ export function Storefront({
 
   const clearFilters = () => {
     setQuery("");
+    setAiSummary(null);
+    setAiRecommendedIds([]);
+    setAiUsedFallback(false);
     navigate({
       to: basePath,
       search: {} as never,
@@ -124,6 +148,58 @@ export function Storefront({
   const activePriceId =
     PRICE_OPTIONS.find((option) => option.min === minPrice && option.max === maxPrice)?.id ?? "all";
   const assistantProducts = results.slice(0, 12) as Product[];
+  const aiVisualResults = useMemo(() => {
+    if (!aiRecommendedIds.length) return [];
+    const ids = new Set(aiRecommendedIds);
+    return PRODUCTS.filter((product) => ids.has(product.id)).slice(0, 6);
+  }, [aiRecommendedIds]);
+
+  const runAiSearch = async (message: string) => {
+    const candidatePool = PRODUCTS.filter((product) => stockOf(product.id) > 0).slice(0, 18) as Product[];
+    const fallback = buildSearchFallback(message, selectedBranch, candidatePool);
+
+    setAiLoading(true);
+    try {
+      const response = await fetch("/api/ai-assistant", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          message,
+          language: lang,
+          cart: [],
+          products: candidatePool.map((product) => ({
+            id: product.id,
+            name: product.name,
+            price: product.price,
+            category: product.category,
+            unit: product.unit,
+            stock: stockOf(product.id),
+          })),
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error(`AI search failed (${response.status})`);
+      }
+
+      const data = (await response.json()) as AssistantResponse;
+      const nextQuery = data.suggestedQuery?.trim() || message;
+      setAiSummary(data.answer?.trim() || fallback.answer);
+      setAiRecommendedIds(
+        Array.isArray(data.productIds) && data.productIds.length ? data.productIds : fallback.productIds,
+      );
+      setAiUsedFallback(false);
+      setQuery(nextQuery);
+      updateSearch({ q: nextQuery || undefined });
+    } catch {
+      setAiSummary(fallback.answer);
+      setAiRecommendedIds(fallback.productIds);
+      setAiUsedFallback(true);
+      updateSearch({ q: fallback.suggestedQuery || message || undefined });
+    } finally {
+      setAiLoading(false);
+    }
+  };
 
   return (
     <div className="container mx-auto px-4 py-8">
@@ -140,33 +216,7 @@ export function Storefront({
         </Button>
       </div>
 
-      <div className="mt-6 grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
-        <div className="rounded-[2rem] border border-primary/10 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--brand)_7%,white),white)] p-4 shadow-sm">
-          <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
-            {t("nav.categories")}
-          </div>
-          <div className="mt-3 flex flex-wrap gap-2">
-            {CATEGORIES.slice(0, 8).map((categoryItem) => (
-              <button
-                key={categoryItem.slug}
-                type="button"
-                onClick={() =>
-                  updateSearch({
-                    cat: category === categoryItem.name ? undefined : categoryItem.name,
-                  })
-                }
-                className={`rounded-full px-4 py-2 text-sm font-bold transition ${
-                  category === categoryItem.name
-                    ? "bg-primary text-primary-foreground"
-                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                }`}
-              >
-                {categoryLabel(categoryItem.name, t)}
-              </button>
-            ))}
-          </div>
-        </div>
-
+      <div className="mt-6">
         <div className="rounded-[2rem] border border-border bg-card p-4 shadow-sm">
           <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
             Branch focus
@@ -180,9 +230,17 @@ export function Storefront({
 
       <div className="mt-6 grid gap-4 rounded-[2rem] border border-border bg-card p-4 shadow-sm">
         <form
-          onSubmit={(event) => {
+          onSubmit={async (event) => {
             event.preventDefault();
-            updateSearch({ q: query.trim() || undefined });
+            const nextQuery = query.trim();
+            if (!nextQuery) {
+              setAiSummary(null);
+              setAiRecommendedIds([]);
+              setAiUsedFallback(false);
+              updateSearch({ q: undefined });
+              return;
+            }
+            await runAiSearch(nextQuery);
           }}
           className="grid gap-4"
         >
@@ -191,13 +249,20 @@ export function Storefront({
               <Search className="pointer-events-none absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
               <Input
                 value={query}
-                onChange={(event) => setQuery(event.target.value)}
+                onChange={(event) => {
+                  setQuery(event.target.value);
+                  if (!event.target.value.trim()) {
+                    setAiSummary(null);
+                    setAiRecommendedIds([]);
+                    setAiUsedFallback(false);
+                  }
+                }}
                 placeholder={t("search.placeholder")}
                 className="h-12 rounded-full pl-11"
               />
             </div>
             <Button type="submit" className="h-12 rounded-full px-5 font-bold">
-              {t("ui.searchButton")}
+              {aiLoading ? t("ui.processing") : t("ui.searchButton")}
               <ArrowRight className="ml-2 h-4 w-4" />
             </Button>
             <Button
@@ -222,6 +287,38 @@ export function Storefront({
           </div>
         </form>
       </div>
+
+      {(aiSummary || aiVisualResults.length > 0) && (
+        <div className="mt-6 rounded-[2rem] border border-primary/15 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--brand)_6%,white),white)] p-5 shadow-sm">
+          <div className="flex flex-col gap-2 md:flex-row md:items-start md:justify-between">
+            <div>
+              <div className="inline-flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-primary">
+                <Sparkles className="h-3.5 w-3.5" />
+                AI Visual Results
+              </div>
+              {aiSummary && <p className="mt-2 max-w-3xl text-sm text-muted-foreground">{aiSummary}</p>}
+              {aiUsedFallback && (
+                <p className="mt-2 text-xs font-semibold text-muted-foreground">
+                  AI fallback mode is active. Showing the closest local picture matches.
+                </p>
+              )}
+            </div>
+            {search.q && (
+              <div className="text-sm font-semibold text-primary">
+                {t("search.showingMatchesFor").replace("{branch}", selectedBranch)}
+              </div>
+            )}
+          </div>
+
+          {!!aiVisualResults.length && (
+            <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-6">
+              {aiVisualResults.map((product) => (
+                <ProductCard key={`ai-${product.id}`} product={product} />
+              ))}
+            </div>
+          )}
+        </div>
+      )}
 
       <div className="mt-6">
         <AIAssistant
