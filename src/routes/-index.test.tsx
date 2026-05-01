@@ -1,16 +1,19 @@
 import { render, screen } from '@testing-library/react';
-import { createMemoryRouter, RouterProvider } from '@tanstack/react-router';
+import { RouterProvider, createRouter } from '@tanstack/react-router';
 import { afterEach, describe, it, expect, vi } from 'vitest';
-import { Route } from './index';
+import { routeTree } from '../routeTree.gen';
 
 describe('HomePage', () => {
+  const router = createRouter({
+    routeTree,
+  });
+
   afterEach(() => {
     vi.clearAllMocks();
     vi.restoreAllMocks();
   });
 
   it('should render hero images with object-cover class', () => {
-    const router = createMemoryRouter([Route]);
     render(<RouterProvider router={router} />);
 
     // Advance timers to trigger the image carousel

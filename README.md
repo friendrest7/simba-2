@@ -53,10 +53,17 @@ npm run build
 
 ## Live Demo Notes
 
-- Deploy to Vercel, Netlify, or Cloudflare Pages as a static Vite app
+- Deploy to Vercel as a static Vite app
 - No backend is required for grading because the local fallback is automatic
 - After deploy, the grader can log in immediately with the demo credentials above
 - If you use Supabase auth or password reset on Vercel, set `VITE_PUBLIC_SITE_URL` to your deployed app URL so email and OAuth redirects stay on the live host
+
+## Project Structure Notes
+
+- `public/assets/images/home/` stores the landing page hero images
+- `src/assets/` keeps bundle-managed UI images imported by React components
+- `docs/reference-assets/` keeps non-runtime reference media out of the app root
+- `dist/` is a generated build output and should stay ignored by git
 
 ## GitHub Submission Notes
 
@@ -74,13 +81,13 @@ Supabase is optional. The demo does not depend on it for grading.
 3. Run `supabase/schema.sql`
 4. Optionally seed extra backend data with `npm run backend:seed`
 
-## Grok AI Assistant
+## Groq AI Assistant
 
-The product browsing pages can call Grok through the `/api/grok` serverless endpoint.
+The product browsing pages can call Groq through the `/api/ai-assistant` serverless endpoint.
 
-- Set `XAI_API_KEY` in your deployment environment
+- Set `GROQ_API_KEY` in your deployment environment
 - The assistant falls back to local recommendations if the API is unavailable
-- The integration uses xAI's Responses API with the `grok-4.20` model
+- The integration uses Groq's chat completions API with the `llama-3.3-70b-versatile` model
 
 ## Main Buyer and Staff Files
 

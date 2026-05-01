@@ -4,7 +4,7 @@ import { ArrowRight, Search, SlidersHorizontal, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { ProductCard } from "@/components/ProductCard";
-import { GrokAssistant } from "@/components/GrokAssistant";
+import { AIAssistant } from "@/components/AIAssistant";
 import { useCart } from "@/lib/cart";
 import { useI18n } from "@/lib/i18n";
 import {
@@ -140,6 +140,44 @@ export function Storefront({
         </Button>
       </div>
 
+      <div className="mt-6 grid gap-3 lg:grid-cols-[1.3fr_0.7fr]">
+        <div className="rounded-[2rem] border border-primary/10 bg-[linear-gradient(135deg,color-mix(in_oklab,var(--brand)_7%,white),white)] p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+            {t("nav.categories")}
+          </div>
+          <div className="mt-3 flex flex-wrap gap-2">
+            {CATEGORIES.slice(0, 8).map((categoryItem) => (
+              <button
+                key={categoryItem.slug}
+                type="button"
+                onClick={() =>
+                  updateSearch({
+                    cat: category === categoryItem.name ? undefined : categoryItem.name,
+                  })
+                }
+                className={`rounded-full px-4 py-2 text-sm font-bold transition ${
+                  category === categoryItem.name
+                    ? "bg-primary text-primary-foreground"
+                    : "bg-secondary text-secondary-foreground hover:bg-secondary/80"
+                }`}
+              >
+                {categoryLabel(categoryItem.name, t)}
+              </button>
+            ))}
+          </div>
+        </div>
+
+        <div className="rounded-[2rem] border border-border bg-card p-4 shadow-sm">
+          <div className="text-xs font-bold uppercase tracking-[0.18em] text-primary">
+            Branch focus
+          </div>
+          <div className="mt-2 text-lg font-black">{selectedBranch}</div>
+          <p className="mt-1 text-sm text-muted-foreground">
+            {results.length} filtered products ready for search, cart updates, and quick pickup.
+          </p>
+        </div>
+      </div>
+
       <div className="mt-6 grid gap-4 rounded-[2rem] border border-border bg-card p-4 shadow-sm">
         <form
           onSubmit={(event) => {
@@ -186,7 +224,7 @@ export function Storefront({
       </div>
 
       <div className="mt-6">
-        <GrokAssistant
+        <AIAssistant
           branch={selectedBranch}
           candidates={assistantProducts.length ? assistantProducts : (PRODUCTS.slice(0, 12) as Product[])}
           onUseSuggestedQuery={(nextQuery) =>
